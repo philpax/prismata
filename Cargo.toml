@@ -20,8 +20,6 @@ bevy_mod_raycast = "0.18"
 bevy_mod_reqwest = "0.16.0"
 bevy_transform = { version = "*", features = ["serialize"] }
 bytemuck = "1"
-candle-core = { git = "https://github.com/huggingface/candle.git" }
-candle-nn = { git = "https://github.com/huggingface/candle.git" }
 clap = { version = "4.5.18", features = ["derive"] }
 crossbeam-channel = "0.5.13"
 data-encoding = "2.6"

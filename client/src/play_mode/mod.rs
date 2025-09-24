@@ -5,27 +5,14 @@ use bevy::{prelude::*, time::common_conditions::on_timer};
 
 use crate::{camera::MainCamera, AppState};
 
-mod inverted_pendulum;
-
-mod hoverplate;
-
 #[derive(Component)]
 pub struct RemoveOnPlayExit;
 
 #[derive(Component)]
 pub struct PreserveColliderOnPlayExit;
 
-#[derive(Resource, PartialEq, Eq, Clone, Copy, Default)]
-enum Agent {
-    #[default]
-    InvertedPendulum,
-    Hoverplate,
-}
-
 pub fn plugin(app: &mut App) {
-    app.add_plugins((inverted_pendulum::plugin, hoverplate::plugin))
-        .insert_resource(CubeSize(0.05))
-        .init_resource::<Agent>()
+    app.insert_resource(CubeSize(0.05))
         .add_systems(
             Update,
             (
@@ -43,64 +30,6 @@ pub fn plugin(app: &mut App) {
 
 fn ui_top_left(
     mut egui_contexts: bevy_egui::EguiContexts,
-    mut agent: ResMut<Agent>,
-
-    wheel_query: Query<(
-        &inverted_pendulum::Wheel,
-        &mut inverted_pendulum::WheelSpeed,
-    )>,
-    body_query: Query<
-        (
-            Entity,
-            &mut LinearVelocity,
-            &mut AngularVelocity,
-            &mut ExternalForce,
-            &mut ExternalImpulse,
-            &mut ExternalTorque,
-        ),
-        (
-            Or<(
-                With<inverted_pendulum::Body>,
-                With<inverted_pendulum::WheelSpeed>,
-            )>,
-            Without<hoverplate::Body>,
-            Without<hoverplate::ThrusterPower>,
-        ),
-    >,
-    wheel_axis: ResMut<inverted_pendulum::WheelAxis>,
-    wheel_torque_transform_to_world: ResMut<inverted_pendulum::WheelTorqueTransformToWorld>,
-    pendulum_spawns: EventWriter<inverted_pendulum::Spawn>,
-
-    pid_active: ResMut<hoverplate::PidActive>,
-    pid_settings: ResMut<hoverplate::PidSettings>,
-    thruster_query: Query<(
-        &hoverplate::Thruster,
-        &mut hoverplate::ThrusterPower,
-        &RayHits,
-    )>,
-    physical_object_query: Query<
-        (
-            Entity,
-            &mut LinearVelocity,
-            &mut AngularVelocity,
-            &mut ExternalForce,
-            &mut ExternalImpulse,
-            &mut ExternalTorque,
-        ),
-        (
-            Or<(With<hoverplate::Body>, With<hoverplate::ThrusterPower>)>,
-            Without<inverted_pendulum::Body>,
-            Without<inverted_pendulum::WheelSpeed>,
-        ),
-    >,
-    hoverplate_spawns: EventWriter<hoverplate::Spawn>,
-    (hoverplate_rl_start_training, hoverplate_rl_training_state, hoverplate_rl_config): (
-        EventWriter<hoverplate::rl::StartTraining>,
-        NonSendMut<hoverplate::rl::TrainingState>,
-        ResMut<hoverplate::rl::DdpgConfig>,
-    ),
-
-    mut commands: Commands,
 
     mut cube_size: ResMut<CubeSize>,
     mut store: ResMut<GizmoConfigStore>,
@@ -117,39 +46,6 @@ fn ui_top_left(
 
                 ui.label("Cube Size");
                 ui.add(egui::Slider::new(&mut cube_size.0, 0.01..=1.0).fixed_decimals(2));
-
-                ui.horizontal(|ui| {
-                    ui.selectable_value(&mut *agent, Agent::InvertedPendulum, "Inverted Pendulum");
-                    ui.selectable_value(&mut *agent, Agent::Hoverplate, "Hoverplate");
-                });
-
-                match *agent {
-                    Agent::InvertedPendulum => {
-                        inverted_pendulum::ui_top_left(
-                            ui,
-                            wheel_query,
-                            body_query,
-                            wheel_axis,
-                            wheel_torque_transform_to_world,
-                            pendulum_spawns,
-                            &mut commands,
-                        );
-                    }
-                    Agent::Hoverplate => {
-                        hoverplate::ui_top_left(
-                            ui,
-                            pid_active,
-                            pid_settings,
-                            thruster_query,
-                            physical_object_query,
-                            hoverplate_spawns,
-                            hoverplate_rl_start_training,
-                            hoverplate_rl_training_state,
-                            hoverplate_rl_config,
-                            &mut commands,
-                        );
-                    }
-                }
             });
         });
 }
