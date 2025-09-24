@@ -1,0 +1,61 @@
+[package]
+name = "prismata_client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+avian3d = { workspace = true }
+bevy = { workspace = true, features = ["default"] }
+bevy_async_task = { workspace = true }
+bevy_dolly = { workspace = true }
+bevy_egui = { workspace = true }
+bevy_embedded_assets = { workspace = true }
+bevy-inspector-egui = { workspace = true }
+bevy_mod_picking = { workspace = true }
+bevy_mod_raycast = { workspace = true }
+bevy_mod_reqwest = { workspace = true }
+bevy_transform = { workspace = true }
+bytemuck = { workspace = true }
+candle-core = { workspace = true }
+candle-nn = { workspace = true }
+crossbeam-channel = { workspace = true }
+data-encoding = { workspace = true }
+doc_consts = { workspace = true }
+egui-aesthetix = { workspace = true }
+egui_dock = { workspace = true }
+egui-notify = { workspace = true }
+egui-phosphor = { workspace = true }
+egui_plot = { workspace = true }
+futures-intrusive = { workspace = true }
+git-version = { workspace = true }
+image = { workspace = true }
+rand = { workspace = true }
+rfd = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+transform-gizmo-bevy = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+web-time = { workspace = true }
+zip = { workspace = true }
+
+# Only include Tokio in native builds; it's only used for listen servers
+tokio = { workspace = true, features = ["rt-multi-thread"], optional = true }
+# Only include bevy_atmosphere in native/WebGPU builds; it doesn't support WebGL
+bevy_atmosphere = { workspace = true, optional = true }
+clap = { workspace = true, optional = true }
+
+prismata_protocol = { path = "../protocol" }
+prismata_server_lib = { path = "../server_lib", optional = true }
+
+[features]
+default = ["native", "webgpu"]
+native = [
+    "dep:tokio",
+    "dep:prismata_server_lib",
+    "dep:clap",
+    "bevy/dynamic_linking",
+]
+webgpu = ["bevy/webgpu", "dep:bevy_atmosphere"]
+metal = ["candle-core/metal", "candle-nn/metal"]

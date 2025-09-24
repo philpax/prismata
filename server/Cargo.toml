@@ -1,0 +1,13 @@
+[package]
+name = "prismata_server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+native-tls = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+toml = { workspace = true }
+
+prismata_server_lib = { path = "../server_lib" }
+prismata_protocol = { path = "../protocol" }
