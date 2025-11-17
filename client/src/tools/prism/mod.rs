@@ -852,7 +852,7 @@ fn ui(
     mut prism_render_output_requests: EventWriter<PrismRenderOutput>,
 
     projection_requests: EventWriter<ProjectionRequest>,
-    http_endpoints: Res<HttpEndpoints>,
+    http_endpoints: Option<Res<HttpEndpoints>>,
 
     mut commands: Commands,
 ) {
@@ -864,6 +864,11 @@ fn ui(
 
     let Some(preview_image) = main_image else {
         warn!("Prism UI was requested, but prism state has not been initialised yet");
+        return;
+    };
+
+    let Some(http_endpoints) = http_endpoints else {
+        warn!("Prism UI was requested, but http endpoints are not available in this build");
         return;
     };
 

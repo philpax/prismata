@@ -233,8 +233,9 @@ fn init_app(app: &mut App) {
                 }),
                 ..default()
             }),
-    )
-    .insert_resource(HttpEndpoints::from_function());
+    );
+    // Disable HTTP endpoints in Web builds
+    // .insert_resource(HttpEndpoints::from_function());
 }
 
 fn swap_state(
