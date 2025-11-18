@@ -48,7 +48,7 @@ pub fn plugin(app: &mut App) {
         ))
         .insert_resource(InspectorOpen(false))
         .add_plugins(bevy_inspector_egui::DefaultInspectorConfigPlugin)
-        .add_systems(Startup, setup)
+        .add_systems(Update, setup.run_if(run_once))
         .add_systems(
             PreUpdate,
             (
