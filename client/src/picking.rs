@@ -1,5 +1,5 @@
 use bevy::{
-    picking::{events::Click, mesh_picking::MeshPickingPlugin, pointer::PointerId, prelude::*},
+    picking::{events::Click, mesh_picking::MeshPickingPlugin, prelude::*},
     prelude::*,
 };
 use transform_gizmo_bevy::GizmoTarget;
@@ -20,7 +20,8 @@ struct PickableChild;
 pub struct Selected;
 
 pub fn plugin(app: &mut App) {
-    app.add_plugins((DefaultPickingPlugins, MeshPickingPlugin))
+    // Note: DefaultPickingPlugins is now included in DefaultPlugins as of Bevy 0.15+
+    app.add_plugins(MeshPickingPlugin)
         .add_systems(
             PreUpdate,
             (process_pickable_children, toggle_picking_enabled).chain(),
