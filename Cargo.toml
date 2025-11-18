@@ -10,7 +10,7 @@ bevy = { version = "0.17.2", default-features = false }
 bevy_async_task = "0.9"
 bevy_egui = "0.38"
 bevy_embedded_assets = "0.14"
-bevy-inspector-egui = "0.34"
+bevy-inspector-egui = "0.35.0"
 # bevy_mod_picking = "0.20" # Removed: upstreamed to Bevy since 0.15
 # bevy_mod_raycast = "0.18" # Removed: upstreamed to Bevy since 0.15
 bevy_mod_reqwest = "0.20"
@@ -20,12 +20,10 @@ clap = { version = "4.5.18", features = ["derive"] }
 crossbeam-channel = "0.5.13"
 data-encoding = "2.6"
 doc_consts = "0.2"
-ecolor = "0.28.1"  # Old version for egui-aesthetix compatibility
-egui-aesthetix = { version = "0.2.4", features = ["nord"] }
-egui_dock = "0.15"
-epaint = "0.28.1"  # Old version for egui-aesthetix compatibility
-egui-notify = "0.17"
-egui-phosphor = "0.7"
+egui-aesthetix = { git = "https://github.com/thebashpotato/egui-aesthetix", branch = "dependabot/cargo/egui-0.33", features = ["nord"] }
+egui_dock = "0.18"
+egui-notify = "0.21.0"
+egui-phosphor = { git = "https://github.com/philpax/egui-phosphor" }
 egui_plot = "0.33"
 futures-intrusive = "0.5.0"
 getrandom = { version = "0.2", features = ["js"] }
