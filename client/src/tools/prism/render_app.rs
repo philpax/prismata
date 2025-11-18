@@ -9,7 +9,7 @@ use bevy::{
     prelude::*,
     render::{
         render_graph::{
-            NodeRunError, RenderGraphContext, RenderLabel, ViewNode, ViewNodeRunner,
+            NodeRunError, RenderGraphContext, RenderGraphExt, RenderLabel, ViewNode, ViewNodeRunner,
         },
         render_resource::{
             Buffer, BufferDescriptor, BufferUsages, Extent3d, MapMode,
@@ -51,7 +51,7 @@ pub fn plugin(render_app: &mut App) {
         .add_systems(
             Render,
             map_buffers.after(RenderSystems::Render).run_if(
-                resource_exists::<PrismBuffers>.and_then(resource_exists::<PrismPostProcessRender>),
+                resource_exists::<PrismBuffers>.and(resource_exists::<PrismPostProcessRender>),
             ),
         );
 }
@@ -277,7 +277,7 @@ fn map_buffers(
             Err(err) => panic!("Failed to map mask buffer {err}"),
         });
 
-        render_device.poll(Maintain::wait()).panic_on_timeout();
+        render_device.poll(wgpu::PollType::Wait).unwrap();
         info!("Polled device");
 
         let mut payload = PrismCapturePayload {

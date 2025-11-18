@@ -62,7 +62,7 @@ impl Plugin for PrismPlugin {
                 (
                     spawn_prism.run_if(
                         resource_exists::<PrismRenderSize>
-                            .and_then(not(any_with_component::<PrismMainCamera>)),
+                            .and(not(any_with_component::<PrismMainCamera>)),
                     ),
                     activate_camera,
                     sync_game_camera_and_prism_camera
@@ -70,7 +70,7 @@ impl Plugin for PrismPlugin {
                         .run_if(is_active(Tool::Prism)),
                     on_use.run_if(is_in_use(Tool::Prism, Some(Duration::from_millis(50)))),
                     update_state_from_events.run_if(
-                        resource_exists::<PrismRenderSize>.and_then(resource_exists::<PrismState>),
+                        resource_exists::<PrismRenderSize>.and(resource_exists::<PrismState>),
                     ),
                     ui.run_if(is_active(Tool::Prism)),
                 )
@@ -452,7 +452,7 @@ fn spawn_prism(
     };
     main_image.resize(size);
     let image_handle = images.add(main_image);
-    egui_user_textures.add_image(image_handle.clone());
+    egui_user_textures.add_image(bevy_egui::EguiTextureHandle::Strong(image_handle.clone()));
     commands.insert_resource(PrismMainImage(image_handle.clone()));
     commands.spawn((
         Camera3d::default(),
@@ -486,7 +486,7 @@ fn spawn_prism(
     };
     mask_image.resize(size);
     let mask_image_handle = images.add(mask_image);
-    egui_user_textures.add_image(mask_image_handle.clone());
+    egui_user_textures.add_image(bevy_egui::EguiTextureHandle::Strong(mask_image_handle.clone()));
     commands.insert_resource(PrismMaskImage(mask_image_handle.clone()));
     commands.spawn((
         Camera3d::default(),
@@ -702,7 +702,7 @@ fn update_state_from_events(
                 if !is_active {
                     toasts
                         .info("Prism captured. Ready to reimagine.")
-                        .set_duration(Some(Duration::from_secs(2)));
+                        .duration(Some(Duration::from_secs(2)));
                 }
             }
         }
@@ -724,7 +724,7 @@ fn update_state_from_events(
                         if !is_active {
                             toasts
                                 .info("Prism reimagination complete. Ready to project.")
-                                .set_duration(Some(Duration::from_secs(2)));
+                                .duration(Some(Duration::from_secs(2)));
                         }
 
                         // We intentionally ignore all future events for this state;
@@ -755,7 +755,7 @@ fn update_state_from_events(
                 if !is_active {
                     toasts
                         .info("Prism successfully projected.")
-                        .set_duration(Some(Duration::from_secs(3)));
+                        .duration(Some(Duration::from_secs(3)));
                 } else {
                     active_tool.disable_if_active(Tool::Prism);
                 }
@@ -868,7 +868,7 @@ fn ui(
 
     let ctx = contexts.ctx_mut().unwrap();
 
-    let screen_size = ctx.screen_rect().size();
+    let screen_size = ctx.content_rect().size();
     let total_size = screen_size.min_elem();
     let image_size_pct = egui::Vec2::splat(0.75);
     let side_panel_width_pct = 0.15;
@@ -1402,7 +1402,7 @@ fn reimagine(
         .on_error(
             |trigger: On<ReqwestErrorEvent>, mut errors: MessageWriter<PrismError>| {
                 errors.write(PrismError {
-                    message: format!("{:?}", trigger.event().0),
+                    message: format!("{:?}", trigger.event().error),
                 });
             },
         );

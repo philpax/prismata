@@ -41,8 +41,8 @@ impl SpawnableBundle {
             transform,
             pickable_children: PickableChildren,
             render_layers: RenderLayers::from_layers(&[
-                rendering::ALL_NON_MASK_CAMERA_LAYER,
-                rendering::MASK_CAMERA_ONLY_LAYER,
+                rendering::ALL_NON_MASK_CAMERA_LAYER as usize,
+                rendering::MASK_CAMERA_ONLY_LAYER as usize,
             ]),
             propagate_render_layers: rendering::PropagateRenderLayers,
         }
@@ -60,7 +60,7 @@ pub fn plugin(app: &mut App) {
                 on_preview_destroy.run_if(brush_should_be_destroyed::<SpawnPreview>(Tool::Spawn)),
                 on_use.run_if(
                     is_in_use(Tool::Spawn, Some(Duration::from_millis(100)))
-                        .and_then(resource_exists::<SpawnPreview>),
+                        .and(resource_exists::<SpawnPreview>),
                 ),
             )
                 .chain()
@@ -173,7 +173,7 @@ fn categorize_assets(
             "Previews" => {
                 spawnable.preview = {
                     let handle = assets.load(path.clone());
-                    let texture_id = egui_contexts.add_image(handle.clone());
+                    let texture_id = egui_contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone()));
                     Some((path.clone(), handle, texture_id))
                 }
             }

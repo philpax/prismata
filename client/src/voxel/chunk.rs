@@ -732,8 +732,7 @@ fn visualize_chunks(
         let position = transform.translation + Vec3::splat(chunk_size_meters.0 / 2.0);
         gizmos.primitive_3d(
             &Cuboid::from_size(Vec3::splat(chunk_size_meters.0)),
-            position,
-            transform.rotation,
+            Isometry3d::new(position, transform.rotation),
             if has_draft_voxels {
                 Color::linear_rgb(1.0, 1.0, 0.0)
             } else {
@@ -741,7 +740,7 @@ fn visualize_chunks(
             },
         );
 
-        let Some(screen_pos) = our_camera.world_to_viewport(our_camera_transform, position) else {
+        let Ok(screen_pos) = our_camera.world_to_viewport(our_camera_transform, position) else {
             continue;
         };
         egui_context.debug_painter().text(

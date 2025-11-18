@@ -64,6 +64,7 @@ pub fn raycast(
         .filter(|(entity, _)| {
             util::find_parent_with_component(parents, raycast_ignores, *entity).is_none()
         })
+        .cloned()
         .collect();
 
     // Sort by distance to get closest hits first

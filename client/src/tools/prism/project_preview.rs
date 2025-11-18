@@ -67,10 +67,10 @@ fn regenerate_entity_on_state_change(
         if let Ok(child_of) = parent_query.get(entity) {
             commands.entity(child_of.parent()).remove_children(&[entity]);
         }
-        if let Some(entity) = commands.get_entity(entity) {
+        if let Ok(mut entity_commands) = commands.get_entity(entity) {
             // Should be taken care of by the preview entity being despawned,
             // but just in case
-            entity.despawn();
+            entity_commands.despawn();
         }
     }
     if let PrismState::Rendered(rendered) = &*state {

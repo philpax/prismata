@@ -45,12 +45,12 @@ pub fn plugin(app: &mut App) {
                 create_brush.run_if(brush_should_be_created::<OurWallBrush>(Tool::Wall)),
                 destroy_brush.run_if(brush_should_be_destroyed::<OurWallBrush>(Tool::Wall)),
                 update_brush_height
-                    .run_if(resource_exists::<WallBrushState>.and_then(is_cursor_visible)),
+                    .run_if(resource_exists::<WallBrushState>.and(is_cursor_visible)),
                 update_brush_viz.run_if(
-                    resource_exists::<OurWallBrush>.and_then(resource_exists::<WallBrushState>),
+                    resource_exists::<OurWallBrush>.and(resource_exists::<WallBrushState>),
                 ),
                 on_click.run_if(
-                    stopped_being_used(Tool::Wall).and_then(resource_exists::<WallBrushState>),
+                    stopped_being_used(Tool::Wall).and(resource_exists::<WallBrushState>),
                 ),
             )
                 .chain()

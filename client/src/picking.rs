@@ -79,7 +79,7 @@ fn handle_selection_clicks(
     pickable_children_query: Query<(), With<PickableChildren>>,
 ) {
     for click in click_events.read() {
-        let mut entity = click.target();
+        let mut entity = click.entity;
 
         // If this is a pickable child, find its parent
         if pickable_child_query.contains(entity) {
@@ -105,7 +105,7 @@ fn handle_selection_clicks(
 fn update_picking(
     mut commands: Commands,
     selected_query: Query<Entity, With<Selected>>,
-    target_query: Query<(), With<GizmoTarget>>,
+    target_query: Query<Entity, With<GizmoTarget>>,
 ) {
     for entity in &selected_query {
         let has_gizmo_target = target_query.contains(entity);

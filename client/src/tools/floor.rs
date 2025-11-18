@@ -47,12 +47,12 @@ pub fn plugin(app: &mut App) {
                 create_brush.run_if(brush_should_be_created::<OurFloorBrush>(Tool::Floor)),
                 destroy_brush.run_if(brush_should_be_destroyed::<OurFloorBrush>(Tool::Floor)),
                 update_floor_width
-                    .run_if(resource_exists::<FloorBrushState>.and_then(is_cursor_visible)),
+                    .run_if(resource_exists::<FloorBrushState>.and(is_cursor_visible)),
                 update_brush_viz.run_if(
-                    resource_exists::<OurFloorBrush>.and_then(resource_exists::<FloorBrushState>),
+                    resource_exists::<OurFloorBrush>.and(resource_exists::<FloorBrushState>),
                 ),
                 on_click.run_if(
-                    stopped_being_used(Tool::Floor).and_then(resource_exists::<FloorBrushState>),
+                    stopped_being_used(Tool::Floor).and(resource_exists::<FloorBrushState>),
                 ),
             )
                 .chain()

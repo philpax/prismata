@@ -150,19 +150,20 @@ fn setup(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
         }
     }
 
-    let original_visuals = egui::Visuals::dark();
-    let mut style = AesthetixWithNormalSpacing(egui_aesthetix::themes::NordDark).custom_style();
-    style.visuals.popup_shadow = original_visuals.popup_shadow;
-    style.visuals.window_shadow = original_visuals.window_shadow;
-    contexts.ctx_mut().unwrap().set_style(Arc::new(style));
+    // TODO(Bevy 0.17): egui-aesthetix and egui-phosphor use incompatible egui versions. Need to find compatible versions or recreate styling manually.
+    // let original_visuals = egui::Visuals::dark();
+    // let mut style = AesthetixWithNormalSpacing(egui_aesthetix::themes::NordDark).custom_style();
+    // style.visuals.popup_shadow = original_visuals.popup_shadow;
+    // style.visuals.window_shadow = original_visuals.window_shadow;
+    // contexts.ctx_mut().unwrap().set_style(Arc::new(style));
 
-    let mut fonts = egui::FontDefinitions::default();
-    egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
-    contexts.ctx_mut().unwrap().set_fonts(fonts);
+    // let mut fonts = egui::FontDefinitions::default();
+    // egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
+    // contexts.ctx_mut().unwrap().set_fonts(fonts);
 
     toasts
         .info("Welcome! Select a tool and left-click to create.")
-        .set_duration(Some(web_time::Duration::from_secs(5)));
+        .duration(Some(web_time::Duration::from_secs(5)));
 }
 
 fn ui_left_panel(mut contexts: bevy_egui::EguiContexts, active_tool: ResMut<tools::ActiveTool>) {
@@ -207,27 +208,66 @@ fn ui_right_panel<'a>(
         .default_size(egui::vec2(320.0, 670.0))
         .show(contexts.ctx_mut().unwrap(), |ui| {
             egui::Frame::window(ui.style()).show(ui, |ui| {
-                egui_dock::DockArea::new(&mut right_panel_dock_state.0).show_inside(
-                    ui,
-                    &mut RightPanelViewer {
-                        tool_color,
-                        last_used_colors,
+                // TODO(Bevy 0.17): egui_dock 0.15 uses egui 0.30, incompatible with bevy_egui 0.38 (egui 0.33)
+                // egui_dock::DockArea::new(&mut right_panel_dock_state.0).show_inside(
+                //     ui,
+                //     &mut RightPanelViewer {
+                //         tool_color,
+                //         last_used_colors,
+                //
+                //         voxels_per_meter,
+                //         recreate_start_scene_writer,
+                //         project_name,
+                //         request_save_writer,
+                //         request_load_writer,
+                //         floor_color,
+                //         sun_angle,
+                //
+                //         chunk_visualization,
+                //         chunks,
+                //         chunk_datas,
+                //         cursor_ray_hit,
+                //         cursor_ray_hit_without_draft,
+                //     },
+                // );
 
-                        voxels_per_meter,
-                        recreate_start_scene_writer,
-                        project_name,
-                        request_save_writer,
-                        request_load_writer,
-                        floor_color,
-                        sun_angle,
+                // Temporary UI without DockArea
+                let mut viewer = RightPanelViewer {
+                    tool_color,
+                    last_used_colors,
+                    voxels_per_meter,
+                    recreate_start_scene_writer,
+                    project_name,
+                    request_save_writer,
+                    request_load_writer,
+                    floor_color,
+                    sun_angle,
+                    chunk_visualization,
+                    chunks,
+                    chunk_datas,
+                    cursor_ray_hit,
+                    cursor_ray_hit_without_draft,
+                };
 
-                        chunk_visualization,
-                        chunks,
-                        chunk_datas,
-                        cursor_ray_hit,
-                        cursor_ray_hit_without_draft,
-                    },
-                );
+                ui.horizontal(|ui| {
+                    if ui.button("Tools").clicked() {
+                        // Switch to tools tab
+                    }
+                    if ui.button("Settings").clicked() {
+                        // Switch to settings tab
+                    }
+                    if ui.button("Info").clicked() {
+                        // Switch to info tab
+                    }
+                });
+                ui.separator();
+
+                // For now, show all tabs
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.collapsing("Tools", |ui| viewer.tools(ui));
+                    ui.collapsing("Settings", |ui| viewer.settings(ui));
+                    ui.collapsing("Info", |ui| viewer.info(ui));
+                });
             });
         });
 }
@@ -264,19 +304,20 @@ struct RightPanelViewer<'w, 's, 'a> {
     cursor_ray_hit: Res<'w, CursorRayHit>,
     cursor_ray_hit_without_draft: Res<'w, CursorRayHitWithoutDraft>,
 }
-impl<'w, 's, 'a> egui_dock::TabViewer for RightPanelViewer<'w, 's, 'a> {
-    type Tab = RightPanelTab;
-    fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {
-        tab.to_string().into()
-    }
-    fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
-        match *tab {
-            RightPanelTab::Tools => self.tools(ui),
-            RightPanelTab::Settings => self.settings(ui),
-            RightPanelTab::Info => self.info(ui),
-        }
-    }
-}
+// TODO(Bevy 0.17): Commented out with egui_dock
+// impl<'w, 's, 'a> egui_dock::TabViewer for RightPanelViewer<'w, 's, 'a> {
+//     type Tab = RightPanelTab;
+//     fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {
+//         tab.to_string().into()
+//     }
+//     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
+//         match *tab {
+//             RightPanelTab::Tools => self.tools(ui),
+//             RightPanelTab::Settings => self.settings(ui),
+//             RightPanelTab::Info => self.info(ui),
+//         }
+//     }
+// }
 impl RightPanelViewer<'_, '_, '_> {
     fn tools(&mut self, ui: &mut egui::Ui) {
         static PALETTE: LazyLock<Vec<(Color, egui::Color32)>> = LazyLock::new(|| {
@@ -348,7 +389,7 @@ impl RightPanelViewer<'_, '_, '_> {
             } else {
                 egui::Stroke::NONE
             };
-            ui.painter().rect(rect, rounding, egui_color, stroke);
+            ui.painter().rect(rect, rounding, egui_color, stroke, egui::StrokeKind::Outside);
             if response.clicked() {
                 *tool_color_base = color;
             }
@@ -487,7 +528,9 @@ fn ui_top_right_panel(
 }
 
 fn ui_toasts(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
-    toasts.show(contexts.ctx_mut().unwrap());
+    // TODO: egui version mismatch between bevy_egui and toasts - fix when versions align
+    // toasts.show(contexts.ctx().unwrap());
+    let _ = (contexts, toasts); // Suppress unused variable warnings
 }
 
 fn ui_inspector(
@@ -514,16 +557,19 @@ fn ui_inspector(
         .show(egui_context.get_mut(), |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 // equivalent to `WorldInspectorPlugin`
-                bevy_inspector_egui::bevy_inspector::ui_for_world(world, ui);
+                // TODO: bevy_inspector_egui version mismatch with egui - fix when versions align
+                // bevy_inspector_egui::bevy_inspector::ui_for_world(world, ui);
 
                 egui::CollapsingHeader::new("Materials").show(ui, |ui| {
-                    bevy_inspector_egui::bevy_inspector::ui_for_assets::<StandardMaterial>(
-                        world, ui,
-                    );
+                    // TODO: bevy_inspector_egui version mismatch with egui - fix when versions align
+                    // bevy_inspector_egui::bevy_inspector::ui_for_assets::<StandardMaterial>(
+                    //     world, ui,
+                    // );
                 });
 
                 ui.heading("Entities");
-                bevy_inspector_egui::bevy_inspector::ui_for_world_entities(world, ui);
+                // TODO: bevy_inspector_egui version mismatch with egui - fix when versions align
+                // bevy_inspector_egui::bevy_inspector::ui_for_world_entities(world, ui);
             });
         });
     *world.resource_mut::<InspectorOpen>() = InspectorOpen(inspector_open);
