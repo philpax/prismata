@@ -150,15 +150,19 @@ fn setup(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
         }
     }
 
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+
     let original_visuals = egui::Visuals::dark();
     let mut style = AesthetixWithNormalSpacing(egui_aesthetix::themes::NordDark).custom_style();
     style.visuals.popup_shadow = original_visuals.popup_shadow;
     style.visuals.window_shadow = original_visuals.window_shadow;
-    contexts.ctx_mut().unwrap().set_style(Arc::new(style));
+    ctx.set_style(Arc::new(style));
 
     let mut fonts = egui::FontDefinitions::default();
     egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
-    contexts.ctx_mut().unwrap().set_fonts(fonts);
+    ctx.set_fonts(fonts);
 
     toasts
         .info("Welcome! Select a tool and left-click to create.")
@@ -166,9 +170,12 @@ fn setup(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
 }
 
 fn ui_left_panel(mut contexts: bevy_egui::EguiContexts, active_tool: ResMut<tools::ActiveTool>) {
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     egui::Area::new("Left".into())
         .anchor(egui::Align2::LEFT_CENTER, egui::Vec2::ZERO)
-        .show(contexts.ctx_mut().unwrap(), |ui| {
+        .show(ctx, |ui| {
             egui::Frame::window(ui.style()).show(ui, |ui| {
                 tools::ui_left_panel(ui, active_tool);
             });
@@ -202,10 +209,13 @@ fn ui_right_panel<'a>(
     cursor_ray_hit: Res<CursorRayHit>,
     cursor_ray_hit_without_draft: Res<CursorRayHitWithoutDraft>,
 ) {
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     egui::Area::new("Right".into())
         .anchor(egui::Align2::RIGHT_CENTER, egui::Vec2::ZERO)
         .default_size(egui::vec2(320.0, 670.0))
-        .show(contexts.ctx_mut().unwrap(), |ui| {
+        .show(ctx, |ui| {
             egui::Frame::window(ui.style()).show(ui, |ui| {
                 // TODO(Bevy 0.17): egui_dock 0.15 uses egui 0.30, incompatible with bevy_egui 0.38 (egui 0.33)
                 // egui_dock::DockArea::new(&mut right_panel_dock_state.0).show_inside(
@@ -510,7 +520,9 @@ fn ui_top_right_panel(
     main_camera: Query<(&camera::CameraType, &camera::CameraController), With<camera::MainCamera>>,
     state: Res<State<AppState>>,
 ) {
-    let ctx = contexts.ctx_mut().unwrap();
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     egui::Area::new("TopRight".into())
         .anchor(egui::Align2::RIGHT_TOP, egui::Vec2::ZERO)
         .show(ctx, |ui| {
@@ -527,7 +539,10 @@ fn ui_top_right_panel(
 }
 
 fn ui_toasts(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
-    toasts.show(contexts.ctx_mut().unwrap());
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+    toasts.show(ctx);
 }
 
 fn ui_inspector(
@@ -579,7 +594,9 @@ fn absorb_egui_inputs(
     mut mouse_wheel: ResMut<Messages<MouseWheel>>,
     mut keyboard: ResMut<ButtonInput<KeyCode>>,
 ) {
-    let ctx = contexts.ctx_mut().unwrap();
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     if !(ctx.wants_pointer_input() || ctx.is_pointer_over_area()) {
         return;
     }
