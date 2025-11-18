@@ -8,7 +8,7 @@ avian3d = "0.4"
 axum = "0.7"
 bevy = { version = "0.17.2", default-features = false }
 bevy_async_task = "0.9"
-bevy_dolly = { git = "https://github.com/philpax/bevy_dolly.git", branch = "fix-prelude-with-disabled-features", default-features = false, features = [
+bevy_dolly = { git = "https://github.com/BlackPhlox/bevy_dolly.git", branch = "bevy_0.16", default-features = false, features = [
     "drivers",
 ] }
 bevy_egui = "0.38"
