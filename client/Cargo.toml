@@ -44,9 +44,11 @@ bytemuck = { workspace = true }
 crossbeam-channel = { workspace = true }
 data-encoding = { workspace = true }
 doc_consts = { workspace = true }
+ecolor = { workspace = true }
 egui-aesthetix = { workspace = true }
 egui_dock = { workspace = true }
 egui-notify = { workspace = true }
+epaint = { workspace = true }
 egui-phosphor = { workspace = true }
 egui_plot = { workspace = true }
 futures-intrusive = { workspace = true }

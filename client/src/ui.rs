@@ -1,7 +1,4 @@
-use std::{
-    fmt,
-    sync::{Arc, LazyLock},
-};
+use std::{fmt, sync::{Arc, LazyLock}};
 
 use std::collections::HashSet;
 
@@ -133,8 +130,8 @@ fn setup(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
         fn dark_mode_visuals(&self) -> bool {
             self.0.dark_mode_visuals()
         }
-        fn margin_style(&self) -> f32 {
-            6.0
+        fn margin_style(&self) -> i8 {
+            6
         }
         fn button_padding(&self) -> OldVec2 {
             OldVec2::new(6.0, 4.0)
@@ -145,18 +142,19 @@ fn setup(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
         fn scroll_bar_width_style(&self) -> f32 {
             6.0
         }
-        fn rounding_visuals(&self) -> f32 {
-            4.0
+        fn rounding_visuals(&self) -> u8 {
+            4
         }
     }
 
-    // TODO(Bevy 0.17): egui-aesthetix and egui-phosphor use incompatible egui versions. Need to find compatible versions or recreate styling manually.
-    // let original_visuals = egui::Visuals::dark();
-    // let mut style = AesthetixWithNormalSpacing(egui_aesthetix::themes::NordDark).custom_style();
-    // style.visuals.popup_shadow = original_visuals.popup_shadow;
-    // style.visuals.window_shadow = original_visuals.window_shadow;
-    // contexts.ctx_mut().unwrap().set_style(Arc::new(style));
+    let original_visuals = egui::Visuals::dark();
+    let mut style = AesthetixWithNormalSpacing(egui_aesthetix::themes::NordDark).custom_style();
+    style.visuals.popup_shadow = original_visuals.popup_shadow;
+    style.visuals.window_shadow = original_visuals.window_shadow;
+    contexts.ctx_mut().unwrap().set_style(Arc::new(style));
 
+    // TODO: egui-phosphor uses egui 0.32, causing type mismatch with our egui 0.33.
+    // Uncomment when egui-phosphor is updated to 0.33.
     // let mut fonts = egui::FontDefinitions::default();
     // egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
     // contexts.ctx_mut().unwrap().set_fonts(fonts);
@@ -184,7 +182,7 @@ impl Default for RightPanelDockState {
     }
 }
 fn ui_right_panel<'a>(
-    mut right_panel_dock_state: ResMut<RightPanelDockState>,
+    right_panel_dock_state: ResMut<RightPanelDockState>,
     mut contexts: bevy_egui::EguiContexts,
     tool_color: ResMut<tools::ToolColor>,
     last_used_colors: Res<tools::LastUsedColors>,
@@ -528,9 +526,7 @@ fn ui_top_right_panel(
 }
 
 fn ui_toasts(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
-    // TODO: egui version mismatch between bevy_egui and toasts - fix when versions align
-    // toasts.show(contexts.ctx().unwrap());
-    let _ = (contexts, toasts); // Suppress unused variable warnings
+    toasts.show(contexts.ctx_mut().unwrap());
 }
 
 fn ui_inspector(
