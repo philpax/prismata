@@ -68,12 +68,15 @@ pub fn plugin(app: &mut App) {
                     reset_cursor_visibility_on_tool_change.run_if(tools::tool_just_changed),
                 )
                     .chain(),
-                ui_left_panel.run_if(in_state(AppState::Edit)),
-                ui_right_panel.run_if(in_state(AppState::Edit)),
-                ui_top_left_panel.run_if(in_state(AppState::Edit)),
-                ui_top_right_panel,
-                ui_toasts,
-                ui_inspector,
+                (
+                    ui_left_panel.run_if(in_state(AppState::Edit)),
+                    ui_right_panel.run_if(in_state(AppState::Edit)),
+                    ui_top_left_panel.run_if(in_state(AppState::Edit)),
+                    ui_top_right_panel,
+                    ui_toasts,
+                    ui_inspector,
+                )
+                    .after(bevy_egui::EguiPreUpdateSet::BeginPass),
             ),
         );
 }
