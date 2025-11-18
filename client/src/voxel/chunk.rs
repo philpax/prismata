@@ -5,20 +5,22 @@
 //! efficient than updating each voxel individually. It also prevents issues that arise from
 //! chunks not existing prior to the update.
 
-use std::sync::{atomic::AtomicBool, Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{atomic::AtomicBool, Arc, Mutex},
+};
 
 use avian3d::prelude::*;
 use bevy::{
     asset::embedded_asset,
+    camera::visibility::RenderLayers,
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
     render::{
         mesh::{Indices, PrimitiveTopology},
         render_asset::RenderAssetUsages,
         render_resource::{AsBindGroup, ShaderRef},
-        view::RenderLayers,
     },
-    utils::HashMap,
 };
 use bevy_egui::{egui, EguiContexts};
 
@@ -468,7 +470,7 @@ fn garbage_collect_chunks(
     }
     for chunk_coords in chunks_to_remove {
         if let Some(chunk_entity) = all_chunks.remove(&chunk_coords) {
-            commands.entity(chunk_entity).despawn_descendants_recursive();
+            commands.entity(chunk_entity).despawn();
         }
     }
     let new_chunk_count = all_chunks.0.len();
@@ -506,7 +508,7 @@ fn rebuild_updated_chunks(
 
         commands
             .entity(chunk_id)
-            .despawn_descendants_recursive()
+            .despawn_related::<Children>()
             .with_children(|b| {
                 let handle = meshes.add(build_mesh(chunk_data, true));
                 b.spawn((

@@ -1,4 +1,4 @@
-use bevy::{input::mouse::MouseMotion, prelude::*, render::view::RenderLayers};
+use bevy::{camera::visibility::RenderLayers, input::mouse::MouseMotion, prelude::*};
 use bevy_egui::egui;
 
 use crate::{
@@ -108,7 +108,7 @@ fn create_brush(
 }
 
 fn destroy_brush(brush: Res<OurFloorBrush>, mut commands: Commands) {
-    commands.entity(brush.0).despawn_descendants_recursive();
+    commands.entity(brush.0).despawn();
     commands.remove_resource::<OurFloorBrush>();
     commands.remove_resource::<FloorBrushState>();
 }

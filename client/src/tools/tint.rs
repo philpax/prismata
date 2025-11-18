@@ -1,6 +1,6 @@
 use web_time::Duration;
 
-use bevy::{prelude::*, render::view::RenderLayers};
+use bevy::{camera::visibility::RenderLayers, prelude::*};
 use bevy_egui::egui;
 
 use crate::{
@@ -73,7 +73,7 @@ fn create_brush(
 }
 
 fn destroy_brush(brush: Res<OurTintBrush>, mut commands: Commands) {
-    commands.entity(brush.0).despawn_descendants_recursive();
+    commands.entity(brush.0).despawn();
     commands.remove_resource::<OurTintBrush>();
 }
 

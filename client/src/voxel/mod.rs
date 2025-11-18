@@ -80,7 +80,7 @@ pub fn clear_all(world: &mut World) {
         .iter(world)
         .collect();
     for entity in entities {
-        world.entity_mut(entity).despawn_descendants_recursive();
+        world.entity_mut(entity).despawn();
     }
     info!("Cleared all chunks");
 }

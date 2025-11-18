@@ -1,5 +1,4 @@
 use bevy::{
-    hierarchy::Parent,
     prelude::*,
     render::{mesh::Indices, render_asset::RenderAssetUsages, render_resource::*},
 };
@@ -47,7 +46,7 @@ fn regenerate_entity_on_state_change(
     state: Res<PrismState>,
     voxel_size_meters: Res<VoxelSizeMeters>,
     global_transform_query: Query<&GlobalTransform>,
-    parent_query: Query<&Parent>,
+    parent_query: Query<&ChildOf>,
     mut preview_viz_entity: ResMut<PrismPreviewVizEntity>,
     mut hysteresis: ResMut<StateChangeHysteresisInstant>,
     mut commands: Commands,
@@ -63,13 +62,13 @@ fn regenerate_entity_on_state_change(
     }
 
     if let Some(entity) = preview_viz_entity.0.take() {
-        if let Ok(parent) = parent_query.get(entity) {
-            commands.entity(parent.get()).remove_children(&[entity]);
+        if let Ok(child_of) = parent_query.get(entity) {
+            commands.entity(child_of.parent()).remove_children(&[entity]);
         }
         if let Some(entity) = commands.get_entity(entity) {
             // Should be taken care of by the preview entity being despawned,
             // but just in case
-            entity.despawn_descendants_recursive();
+            entity.despawn();
         }
     }
     if let PrismState::Rendered(rendered) = &*state {

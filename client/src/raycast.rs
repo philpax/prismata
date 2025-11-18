@@ -1,5 +1,4 @@
 use bevy::{
-    hierarchy::Parent,
     picking::mesh_picking::{ray_cast::MeshRayCast, MeshRayCastSettings},
     prelude::*,
     window::PrimaryWindow,
@@ -50,7 +49,7 @@ pub fn raycast(
     chunks: &Chunks,
     chunk_datas: &Query<&ChunkData>,
     raycast_ignores: &Query<(), With<RaycastIgnore>>,
-    parents: &Query<&Parent>,
+    parents: &Query<&ChildOf>,
     voxel_size_meters: VoxelSizeMeters,
     ray: Ray3d,
     max_distance: f32,
@@ -129,7 +128,7 @@ pub fn update_world_rayhits(
     mut cursor_ray_hit_without_draft: ResMut<CursorRayHitWithoutDraft>,
     chunk_datas: Query<&ChunkData>,
     raycast_ignores: Query<(), With<RaycastIgnore>>,
-    parents: Query<&Parent>,
+    parents: Query<&ChildOf>,
     chunks: Res<Chunks>,
     voxel_size_meters: Res<VoxelSizeMeters>,
     primary_window: Query<&Window, With<PrimaryWindow>>,

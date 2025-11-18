@@ -6,7 +6,9 @@ use std::{
 
 use avian3d::prelude::{ColliderConstructor, ColliderConstructorHierarchy, RigidBody};
 use bevy::{
-    asset::io::AssetSourceId, prelude::*, render::view::RenderLayers,
+    asset::io::AssetSourceId,
+    camera::visibility::RenderLayers,
+    prelude::*,
     tasks::futures_lite::StreamExt,
 };
 use bevy_egui::{egui, EguiContexts};
@@ -197,7 +199,7 @@ fn on_preview_create(
     if let Some(spawn_preview) = spawn_preview {
         commands
             .entity(spawn_preview.preview_id)
-            .despawn_descendants_recursive();
+            .despawn();
     }
 
     let path = set_spawn_preview.0.clone();
@@ -219,7 +221,7 @@ fn on_preview_create(
 fn on_preview_destroy(spawn_preview: Res<SpawnPreview>, mut commands: Commands) {
     commands
         .entity(spawn_preview.preview_id)
-        .despawn_descendants_recursive();
+        .despawn();
     commands.remove_resource::<SpawnPreview>();
 }
 

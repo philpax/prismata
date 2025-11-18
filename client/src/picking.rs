@@ -1,5 +1,4 @@
 use bevy::{
-    hierarchy::Parent,
     picking::{events::Click, mesh_picking::MeshPickingPlugin, pointer::PointerId, prelude::*},
     prelude::*,
 };
@@ -79,7 +78,7 @@ fn handle_selection_clicks(
     mut commands: Commands,
     selected_query: Query<(), With<Selected>>,
     pickable_child_query: Query<(), With<PickableChild>>,
-    parent_query: Query<&Parent>,
+    parent_query: Query<&ChildOf>,
     pickable_children_query: Query<(), With<PickableChildren>>,
 ) {
     for click in click_events.read() {

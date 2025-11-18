@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use web_time::Duration;
 
 use bevy::{
+    camera::visibility::RenderLayers,
     core_pipeline::{
         prepass::DepthPrepass,
         tonemapping::{DebandDither, Tonemapping},
@@ -14,7 +15,7 @@ use bevy::{
         render_resource::{
             Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
         },
-        view::{ColorGrading, RenderLayers},
+        view::ColorGrading,
         RenderApp,
     },
 };
@@ -1273,14 +1274,14 @@ fn ui(
                     }
                 };
 
-                commands.entity(rendered.preview_entity).despawn_descendants_recursive();
+                commands.entity(rendered.preview_entity).despawn();
 
                 *prism_state = PrismState::Projecting {
                     start_time: web_time::Instant::now(),
                     request_id,
                 };
             } else if retake_requested {
-                commands.entity(rendered.preview_entity).despawn_descendants_recursive();
+                commands.entity(rendered.preview_entity).despawn();
                 *prism_state = PrismState::default();
             }
             // These are separate to avoid mutably borrowing the state unless necessary

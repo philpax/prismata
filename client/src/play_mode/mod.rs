@@ -55,7 +55,7 @@ fn despawn_entities_on_play_exit(
     query: Query<Entity, With<RemoveOnPlayExit>>,
 ) {
     for entity in query.iter() {
-        commands.entity(entity).despawn_descendants_recursive();
+        commands.entity(entity).despawn();
     }
 }
 

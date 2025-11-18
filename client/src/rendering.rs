@@ -2,9 +2,9 @@ use std::f32::consts::TAU;
 
 use avian3d::prelude::{ColliderConstructor, RigidBody};
 use bevy::{
+    camera::visibility::RenderLayers,
     color::palettes::css::SILVER,
     prelude::*,
-    render::view::{Layer, RenderLayers},
 };
 use serde::{Deserialize, Serialize};
 
@@ -59,6 +59,9 @@ pub struct MainCameraGizmos {}
 
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct MainCameraGizmosWithoutDepth {}
+
+// Layer type for RenderLayers in Bevy 0.17
+pub type Layer = u8;
 
 pub const ALL_NON_MASK_CAMERA_LAYER: Layer = 0;
 pub const MAIN_CAMERA_ONLY_LAYER: Layer = 1;

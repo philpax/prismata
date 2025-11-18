@@ -1,10 +1,9 @@
 use bevy::{
-    hierarchy::Parent,
+    camera::visibility::RenderLayers,
     input::mouse::{MouseMotion, MouseWheel},
     pbr::Atmosphere,
     picking::mesh_picking::ray_cast::MeshRayCast,
     prelude::*,
-    render::view::RenderLayers,
 };
 use bevy_egui::egui;
 
@@ -162,7 +161,7 @@ fn swap_camera(
 
     chunk_datas: Query<&ChunkData>,
     raycast_ignores: Query<(), With<RaycastIgnore>>,
-    parents: Query<&Parent>,
+    parents: Query<&ChildOf>,
 
     chunks: Res<Chunks>,
     voxels_per_meter: Res<VoxelsPerMeter>,

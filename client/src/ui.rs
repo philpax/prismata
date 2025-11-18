@@ -7,7 +7,7 @@ use bevy::{
     input::mouse::{MouseScrollUnit, MouseWheel},
     prelude::*,
     utils::HashSet,
-    window::{CursorGrabMode, PrimaryWindow},
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 use bevy_egui::egui;
 use egui_aesthetix::Aesthetix;
@@ -572,23 +572,23 @@ fn drop_egui_input_if_cursor_invisible(
     }
 }
 
-fn set_cursor_visible(cursor_visible: &mut CursorVisible, window: &mut Window, visible: bool) {
-    window.cursor_grab_mode = if visible {
+fn set_cursor_visible(cursor_visible: &mut CursorVisible, cursor_options: &mut CursorOptions, visible: bool) {
+    cursor_options.grab_mode = if visible {
         CursorGrabMode::None
     } else {
         CursorGrabMode::Confined
     };
-    window.cursor_visible = visible;
+    cursor_options.visible = visible;
     cursor_visible.0 = visible;
 }
 
 fn cursor_grab(
     mut cursor_visible: ResMut<CursorVisible>,
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+    mut windows: Query<(&Window, &mut CursorOptions), With<PrimaryWindow>>,
     keys: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
 ) {
-    let Ok(window) = &mut windows.single_mut() else {
+    let Ok((window, mut cursor_options)) = windows.single_mut() else {
         return;
     };
     if !window.focused {
@@ -596,25 +596,25 @@ fn cursor_grab(
     }
     if keys.just_pressed(KeyCode::Tab) {
         let new_visible = !cursor_visible.0;
-        set_cursor_visible(&mut cursor_visible, window, new_visible);
+        set_cursor_visible(&mut cursor_visible, &mut cursor_options, new_visible);
     } else if keys.just_pressed(KeyCode::Escape) {
-        set_cursor_visible(&mut cursor_visible, window, true);
+        set_cursor_visible(&mut cursor_visible, &mut cursor_options, true);
     } else if mouse.just_pressed(MouseButton::Right) {
-        set_cursor_visible(&mut cursor_visible, window, false);
+        set_cursor_visible(&mut cursor_visible, &mut cursor_options, false);
     } else if mouse.just_released(MouseButton::Right) {
-        set_cursor_visible(&mut cursor_visible, window, true);
+        set_cursor_visible(&mut cursor_visible, &mut cursor_options, true);
     }
 }
 
 fn reset_cursor_visibility_on_tool_change(
     mut cursor_visible: ResMut<CursorVisible>,
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+    mut windows: Query<(&Window, &mut CursorOptions), With<PrimaryWindow>>,
 ) {
-    if let Ok(window) = &mut windows.single_mut() {
+    if let Ok((window, mut cursor_options)) = windows.single_mut() {
         if !window.focused {
             return;
         }
-        set_cursor_visible(&mut cursor_visible, window, true);
+        set_cursor_visible(&mut cursor_visible, &mut cursor_options, true);
     }
 }
 
