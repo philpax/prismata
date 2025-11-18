@@ -1,12 +1,12 @@
 use bevy::{
     input::mouse::{MouseMotion, MouseWheel},
     pbr::Atmosphere,
+    picking::mesh_picking::ray_cast::MeshRayCast,
     prelude::*,
     render::view::RenderLayers,
 };
 use bevy_dolly::prelude::*;
 use bevy_egui::egui;
-use bevy_mod_raycast::prelude::Raycast;
 
 use crate::{
     raycast::{raycast, RaycastIgnore},
@@ -121,7 +121,7 @@ fn orbit_max_distance(voxel_size_meters: VoxelSizeMeters) -> f32 {
 
 fn swap_camera(
     keys: Res<ButtonInput<KeyCode>>,
-    mut world_raycast: Raycast,
+    mut world_raycast: MeshRayCast,
     mut commands: Commands,
     mut q_main: Query<
         (Entity, &mut Camera, &GlobalTransform),

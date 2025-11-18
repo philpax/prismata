@@ -817,7 +817,7 @@ fn handle_render_complete_event(
                 },
                 ..default()
             },
-            bevy_mod_picking::PickableBundle::default(),
+            bevy::picking::Pickable::default(),
         ))
         .id();
 
