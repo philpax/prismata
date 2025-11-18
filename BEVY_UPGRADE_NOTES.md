@@ -1,0 +1,218 @@
+# Bevy 0.17 Upgrade Progress
+
+## Summary
+
+This project has been partially upgraded from Bevy 0.14.2 to Bevy 0.17.3. The dependencies have been updated, but some code changes are required to complete the migration.
+
+## ✅ Completed Updates
+
+### Dependencies Successfully Updated
+
+1. **Bevy**: 0.14.2 → 0.17.3
+2. **avian3d**: 0.1.2 → 0.4.1 (physics engine, compatible with Bevy 0.17)
+3. **bevy_egui**: 0.29 → 0.38 (egui integration)
+4. **bevy-inspector-egui**: 0.26 → 0.34
+5. **bevy_embedded_assets**: 0.11 → 0.14
+6. **bevy_async_task**: 0.2.0 → 0.9.0
+7. **bevy_mod_reqwest**: 0.16.0 → 0.20.0
+8. **egui_dock**: 0.13.0 → 0.15.0
+9. **egui-notify**: 0.15.0 → 0.17.0
+10. **egui-phosphor**: 0.6.0 → 0.7.0
+11. **egui_plot**: 0.28 → 0.33
+12. **serde**: Added "derive" feature (required for serde macros)
+
+### Dependencies Removed (Upstreamed to Bevy)
+
+1. **bevy_mod_picking** → Now built into `bevy::picking` (since Bevy 0.15)
+2. **bevy_mod_raycast** → Now built into `bevy::picking::mesh_picking` (since Bevy 0.15)
+
+### Packages That Build Successfully
+
+- ✅ **prismata_protocol**: Builds without errors
+- ✅ **prismata_server_lib**: Builds without errors
+- ✅ **prismata_server**: Builds without errors
+
+## ⚠️ Dependencies That Need Attention
+
+### transform-gizmo-bevy
+
+**Current Version**: 0.3 (for Bevy 0.16)
+**Status**: No Bevy 0.17 compatible version available yet
+
+**Impact**: The transform gizmo functionality may not work correctly. You have these options:
+
+1. **Wait for update**: Monitor https://github.com/urholaukkarinen/transform-gizmo for Bevy 0.17 support
+2. **Fork and update**: Fork the repository and update it yourself
+3. **Alternative**: Use a different transform gizmo library or Bevy's built-in gizmos
+4. **Temporary**: Keep the current version and test if it works despite the version mismatch
+
+### bevy_atmosphere
+
+**Current Version**: 0.10.0 (for Bevy 0.14)
+**Status**: Only supports up to Bevy 0.16
+
+**Migration Path**: Bevy 0.16+ has built-in atmospheric scattering. You should:
+
+1. Remove dependency on `bevy_atmosphere` crate
+2. Use Bevy's built-in `Atmosphere` component
+3. Add `Hdr` component to cameras that use atmospheric rendering
+
+**Files affected**:
+- `client/src/main.rs`
+- `client/src/camera.rs`
+- `client/src/rendering.rs`
+
+## 🔧 Required Code Changes
+
+### 1. Picking System Migration (`client/src/picking.rs`)
+
+**Old API (bevy_mod_picking)**:
+```rust
+use bevy_mod_picking::{
+    picking_core::PickingPluginsSettings,
+    prelude::*,
+    selection::SelectionPluginSettings,
+};
+
+app.add_plugins(DefaultPickingPlugins)
+    .insert_resource(SelectionPluginSettings { ... })
+```
+
+**New API (Bevy 0.17)**:
+```rust
+use bevy::picking::prelude::*;
+
+app.add_plugins(DefaultPickingPlugins)
+    // Use MeshPickingPlugin for mesh picking
+```
+
+**Key Changes**:
+- `PickableBundle` → `Pickable` component
+- `PickSelection` component removed → Use pointer events/observers or create custom selection tracking
+- `PickingPluginsSettings` → Configuration via resources
+- Event-driven approach using observers recommended
+
+**Files to update**:
+- `client/src/picking.rs` - Main picking logic
+- `client/src/tools/prism/mod.rs` - Uses picking for tool interactions
+
+### 2. Raycast System Migration (`client/src/raycast.rs`)
+
+**Old API (bevy_mod_raycast)**:
+```rust
+use bevy_mod_raycast::prelude::{Raycast, RaycastSettings, RaycastVisibility, IntersectionData};
+
+fn system(mut raycast: Raycast) {
+    let hits = raycast.cast_ray(ray, &RaycastSettings { ... });
+}
+```
+
+**New API (Bevy 0.17)**:
+```rust
+use bevy::picking::mesh_picking::{MeshRayCast, MeshRayCastSettings};
+
+fn system(mut raycast: MeshRayCast) {
+    let hits = raycast.cast_ray(ray, &MeshRayCastSettings { ... });
+}
+```
+
+**Key Changes**:
+- `Raycast` → `MeshRayCast` system parameter
+- `RaycastSettings` → `MeshRayCastSettings`
+- `RaycastVisibility` → Settings handled differently
+- API for filtering and hit testing changed
+
+**Files to update**:
+- `client/src/raycast.rs` - Raycast logic
+- `client/src/camera.rs` - Uses Raycast system parameter
+
+### 3. Atmosphere Migration
+
+**Current**:
+```rust
+#[cfg(feature = "webgpu")]
+bevy_atmosphere::plugin::AtmosphereCamera::default()
+```
+
+**Migration**: Use Bevy's built-in atmosphere:
+```rust
+use bevy::core_pipeline::experimental::atmosphere::AtmosphereCamera;
+
+// Add to camera entity
+AtmosphereCamera::default()
+```
+
+## 📝 Other Potential Breaking Changes
+
+Based on Bevy 0.15, 0.16, and 0.17 migration guides, you may encounter:
+
+### General Changes
+1. **Component/Bundle changes**: Many bundles have been deprecated in favor of required components
+2. **Camera changes**: Camera spawning and configuration has changed significantly
+3. **Asset loading**: Asset API has been refactored
+4. **Event changes**: Pointer event names changed (`Pointer<Pressed>` → `Pointer<Press>`)
+
+### Specific API Changes in 0.17
+- `bevy_picking::Location` is no longer a Component; use `bevy_picking::PointerLocation` instead
+- `DragEnter` event now triggers for all entities including the originally dragged one
+- `RelativeCursorPosition` coordinates are now object-centered
+
+## 🚀 Next Steps
+
+1. **Migrate Picking System**:
+   - Update `client/src/picking.rs` to use `bevy::picking` API
+   - Implement custom selection tracking if needed
+   - Update tool interactions to use new pointer events
+
+2. **Migrate Raycast System**:
+   - Update `client/src/raycast.rs` to use `bevy::picking::mesh_picking::MeshRayCast`
+   - Update camera.rs raycast usage
+
+3. **Migrate Atmosphere**:
+   - Remove `bevy_atmosphere` dependency from features
+   - Update camera setup to use built-in atmosphere
+   - Test rendering with new atmosphere system
+
+4. **Test Thoroughly**:
+   - Build the client: `cargo build -p prismata_client`
+   - Test all interactive features
+   - Verify transform gizmos work (or prepare alternative)
+
+5. **Handle transform-gizmo-bevy**:
+   - Monitor for updates or consider alternatives
+   - May need to temporarily disable or replace functionality
+
+## 📚 Resources
+
+- [Bevy 0.14 to 0.15 Migration Guide](https://bevy.org/learn/migration-guides/0-14-to-0-15/)
+- [Bevy 0.15 to 0.16 Migration Guide](https://bevy.org/learn/migration-guides/0-15-to-0-16/)
+- [Bevy 0.16 to 0.17 Migration Guide](https://bevy.org/learn/migration-guides/0-16-to-0-17/)
+- [Bevy Picking Documentation](https://docs.rs/bevy/latest/bevy/picking/)
+- [Mesh Picking Example](https://github.com/bevyengine/bevy/blob/main/examples/picking/mesh_picking.rs)
+- [Bevy 0.17 Release Notes](https://bevy.org/news/bevy-0-17/)
+
+## 🐛 Known Issues
+
+1. **Wayland build dependency**: On Linux, you may need to install `libwayland-dev`:
+   ```bash
+   sudo apt-get install libwayland-dev
+   ```
+
+2. **transform-gizmo-bevy compatibility**: May have issues with Bevy 0.17 - needs testing or update
+
+## ✨ What CAN Be Updated
+
+The following can be updated to latest versions without issues:
+- All server-side dependencies (no Bevy dependency)
+- Standard Rust crates (serde, tokio, axum, etc.)
+- egui ecosystem crates (already updated)
+
+## ❌ What CANNOT Be Updated (Yet)
+
+1. **transform-gizmo-bevy**: Needs maintainer to release Bevy 0.17 version
+2. **bevy_dolly**: Uses a git dependency with a custom branch - may need updating
+3. **bevy_atmosphere**: Should be replaced with Bevy's built-in atmosphere
+
+---
+
+**Last Updated**: This upgrade was performed on 2025-11-18 with Bevy 0.17.3 (latest stable).

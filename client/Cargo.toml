@@ -12,8 +12,8 @@ bevy_dolly = { workspace = true }
 bevy_egui = { workspace = true }
 bevy_embedded_assets = { workspace = true }
 bevy-inspector-egui = { workspace = true }
-bevy_mod_picking = { workspace = true }
-bevy_mod_raycast = { workspace = true }
+# bevy_mod_picking = { workspace = true } # Removed: upstreamed to Bevy
+# bevy_mod_raycast = { workspace = true } # Removed: upstreamed to Bevy
 bevy_mod_reqwest = { workspace = true }
 bevy_transform = { workspace = true }
 bytemuck = { workspace = true }

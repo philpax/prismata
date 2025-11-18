@@ -1,6 +1,9 @@
-use bevy::prelude::*;
-use bevy_mod_picking::{
-    picking_core::PickingPluginsSettings, prelude::*, selection::SelectionPluginSettings,
+use bevy::{
+    picking::{
+        backend::PointerHits, focus::HoverMap, pointer::PointerInteraction, Pickable,
+        PickingPlugin,
+    },
+    prelude::*,
 };
 use transform_gizmo_bevy::GizmoTarget;
 

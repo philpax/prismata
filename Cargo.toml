@@ -4,20 +4,20 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1"
-avian3d = "0.1.2"
+avian3d = "0.4"
 axum = "0.7"
-bevy = { version = "0.14.2", default-features = false }
-bevy_async_task = "0.2.0"
+bevy = { version = "0.17.2", default-features = false }
+bevy_async_task = "0.9"
 bevy_atmosphere = "0.10.0"
 bevy_dolly = { git = "https://github.com/philpax/bevy_dolly.git", branch = "fix-prelude-with-disabled-features", default-features = false, features = [
     "drivers",
 ] }
-bevy_egui = "0.29"
-bevy_embedded_assets = "0.11"
-bevy-inspector-egui = "0.26"
-bevy_mod_picking = "0.20"
-bevy_mod_raycast = "0.18"
-bevy_mod_reqwest = "0.16.0"
+bevy_egui = "0.38"
+bevy_embedded_assets = "0.14"
+bevy-inspector-egui = "0.34"
+# bevy_mod_picking = "0.20" # Removed: upstreamed to Bevy since 0.15
+# bevy_mod_raycast = "0.18" # Removed: upstreamed to Bevy since 0.15
+bevy_mod_reqwest = "0.20"
 bevy_transform = { version = "*", features = ["serialize"] }
 bytemuck = "1"
 clap = { version = "4.5.18", features = ["derive"] }
@@ -25,10 +25,10 @@ crossbeam-channel = "0.5.13"
 data-encoding = "2.6"
 doc_consts = "0.2"
 egui-aesthetix = { version = "0.2.4", features = ["nord"] }
-egui_dock = "0.13.0"
-egui-notify = "0.15.0"
-egui-phosphor = "0.6.0"
-egui_plot = "0.28"
+egui_dock = "0.15"
+egui-notify = "0.17"
+egui-phosphor = "0.7"
+egui_plot = "0.33"
 futures-intrusive = "0.5.0"
 git-version = "0.3"
 image = { version = "0.25.2", default-features = false, features = [
@@ -41,7 +41,7 @@ paste = "1.0"
 rand = "0.8.5"
 reqwest = "0.12.7"
 rfd = "0.15"
-serde = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = "1"
 toml = "0.8"
