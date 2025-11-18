@@ -24,7 +24,7 @@ ecolor = "0.33"
 egui-aesthetix = { git = "https://github.com/thebashpotato/egui-aesthetix", branch = "dependabot/cargo/egui-0.33", features = ["nord"] }
 egui_dock = "0.18"
 egui-notify = "0.21.0"
-egui-phosphor = { git = "https://github.com/philpax/egui-phosphor" }
+egui-phosphor = { git = "https://github.com/amPerl/egui-phosphor" }
 egui_plot = "0.33"
 epaint = "0.33"
 futures-intrusive = "0.5.0"

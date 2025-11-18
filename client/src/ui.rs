@@ -153,11 +153,9 @@ fn setup(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
     style.visuals.window_shadow = original_visuals.window_shadow;
     contexts.ctx_mut().unwrap().set_style(Arc::new(style));
 
-    // TODO: egui-phosphor uses egui 0.32, causing type mismatch with our egui 0.33.
-    // Uncomment when egui-phosphor is updated to 0.33.
-    // let mut fonts = egui::FontDefinitions::default();
-    // egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
-    // contexts.ctx_mut().unwrap().set_fonts(fonts);
+    let mut fonts = egui::FontDefinitions::default();
+    egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
+    contexts.ctx_mut().unwrap().set_fonts(fonts);
 
     toasts
         .info("Welcome! Select a tool and left-click to create.")
