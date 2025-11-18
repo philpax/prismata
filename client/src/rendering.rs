@@ -187,7 +187,6 @@ fn update_floor_color(
 
 #[cfg(feature = "webgpu")]
 fn update_sun(
-    mut atmosphere: bevy_atmosphere::prelude::AtmosphereMut<bevy_atmosphere::prelude::Nishita>,
     mut query: Query<(&mut Transform, &mut DirectionalLight), With<Sun>>,
     sun_angle: Res<SunAngle>,
 ) {
@@ -196,7 +195,8 @@ fn update_sun(
         return;
     };
     let t = sun_angle.0;
-    atmosphere.sun_position = Vec3::new(0., t.sin(), t.cos());
+    // Bevy's built-in Atmosphere component automatically tracks directional lights
+    // No need to manually set sun_position anymore
     light_trans.rotation = Quat::from_rotation_x(-t);
     directional.illuminance = t.sin().max(0.0).powf(2.0) * AMBIENT_DAYLIGHT;
 }

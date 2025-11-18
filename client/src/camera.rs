@@ -1,5 +1,6 @@
 use bevy::{
     input::mouse::{MouseMotion, MouseWheel},
+    pbr::Atmosphere,
     prelude::*,
     render::view::RenderLayers,
 };
@@ -86,7 +87,7 @@ fn setup(mut commands: Commands) {
             ..default()
         },
         #[cfg(feature = "webgpu")]
-        bevy_atmosphere::plugin::AtmosphereCamera::default(),
+        Atmosphere::EARTH,
         render_layers.clone(),
         transform_gizmo_bevy::GizmoCamera,
     ));
@@ -106,7 +107,7 @@ fn setup(mut commands: Commands) {
             ..default()
         },
         #[cfg(feature = "webgpu")]
-        bevy_atmosphere::plugin::AtmosphereCamera::default(),
+        Atmosphere::EARTH,
         render_layers,
     ));
 }

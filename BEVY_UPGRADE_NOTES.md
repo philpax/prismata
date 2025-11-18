@@ -2,9 +2,9 @@
 
 ## Summary
 
-This project has been partially upgraded from Bevy 0.14.2 to Bevy 0.17.3. The dependencies have been updated, but some code changes are required to complete the migration.
+This project has been upgraded from Bevy 0.14.2 to Bevy 0.17.3. Most dependencies have been updated successfully. Some code migration work remains for the picking and raycast systems.
 
-## ✅ Completed Updates
+## ✅ Completed Updates (Latest)
 
 ### Dependencies Successfully Updated
 
@@ -19,12 +19,21 @@ This project has been partially upgraded from Bevy 0.14.2 to Bevy 0.17.3. The de
 9. **egui-notify**: 0.15.0 → 0.17.0
 10. **egui-phosphor**: 0.6.0 → 0.7.0
 11. **egui_plot**: 0.28 → 0.33
-12. **serde**: Added "derive" feature (required for serde macros)
+12. **transform-gizmo-bevy**: Updated to Bevy 0.17 fork from https://github.com/pindash-io/transform-gizmo
+13. **serde**: Added "derive" feature (required for serde macros)
 
 ### Dependencies Removed (Upstreamed to Bevy)
 
 1. **bevy_mod_picking** → Now built into `bevy::picking` (since Bevy 0.15)
 2. **bevy_mod_raycast** → Now built into `bevy::picking::mesh_picking` (since Bevy 0.15)
+3. **bevy_atmosphere** → Replaced with Bevy's built-in `Atmosphere` component ✅
+
+### Code Updates Completed
+
+- ✅ **Removed bevy_atmosphere plugin** from `client/src/main.rs`
+- ✅ **Migrated to built-in Atmosphere**: Updated `client/src/camera.rs` to use `bevy::pbr::Atmosphere::EARTH`
+- ✅ **Updated sun system**: Modified `client/src/rendering.rs` to work with built-in atmosphere (no manual sun_position setting needed)
+- ✅ **Started picking migration**: Updated imports in `client/src/picking.rs` to use `bevy::picking`
 
 ### Packages That Build Successfully
 
@@ -32,35 +41,9 @@ This project has been partially upgraded from Bevy 0.14.2 to Bevy 0.17.3. The de
 - ✅ **prismata_server_lib**: Builds without errors
 - ✅ **prismata_server**: Builds without errors
 
-## ⚠️ Dependencies That Need Attention
+## ⚠️ Remaining Migration Work
 
-### transform-gizmo-bevy
-
-**Current Version**: 0.3 (for Bevy 0.16)
-**Status**: No Bevy 0.17 compatible version available yet
-
-**Impact**: The transform gizmo functionality may not work correctly. You have these options:
-
-1. **Wait for update**: Monitor https://github.com/urholaukkarinen/transform-gizmo for Bevy 0.17 support
-2. **Fork and update**: Fork the repository and update it yourself
-3. **Alternative**: Use a different transform gizmo library or Bevy's built-in gizmos
-4. **Temporary**: Keep the current version and test if it works despite the version mismatch
-
-### bevy_atmosphere
-
-**Current Version**: 0.10.0 (for Bevy 0.14)
-**Status**: Only supports up to Bevy 0.16
-
-**Migration Path**: Bevy 0.16+ has built-in atmospheric scattering. You should:
-
-1. Remove dependency on `bevy_atmosphere` crate
-2. Use Bevy's built-in `Atmosphere` component
-3. Add `Hdr` component to cameras that use atmospheric rendering
-
-**Files affected**:
-- `client/src/main.rs`
-- `client/src/camera.rs`
-- `client/src/rendering.rs`
+The following code migrations still need to be completed to make the client build:
 
 ## 🔧 Required Code Changes
 

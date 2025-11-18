@@ -40,8 +40,6 @@ zip = { workspace = true }
 
 # Only include Tokio in native builds; it's only used for listen servers
 tokio = { workspace = true, features = ["rt-multi-thread"], optional = true }
-# Only include bevy_atmosphere in native/WebGPU builds; it doesn't support WebGL
-bevy_atmosphere = { workspace = true, optional = true }
 clap = { workspace = true, optional = true }
 
 prismata_protocol = { path = "../protocol" }
@@ -55,4 +53,4 @@ native = [
     "dep:clap",
     "bevy/dynamic_linking",
 ]
-webgpu = ["bevy/webgpu", "dep:bevy_atmosphere"]
+webgpu = ["bevy/webgpu"]

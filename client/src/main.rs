@@ -77,12 +77,6 @@ fn main() {
     });
     init_app(&mut app);
 
-    #[cfg(feature = "webgpu")]
-    {
-        app.add_plugins(bevy_atmosphere::plugin::AtmospherePlugin)
-            .insert_resource(bevy_atmosphere::model::AtmosphereModel::default());
-    }
-
     app.insert_resource(ProjectName::default())
         .init_state::<AppState>()
         .add_plugins((
