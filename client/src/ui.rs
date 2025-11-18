@@ -464,7 +464,7 @@ fn ui_top_left_panel(
 
 fn ui_top_right_panel(
     mut contexts: bevy_egui::EguiContexts,
-    main_camera: Query<(&camera::CameraType, &bevy_dolly::prelude::Rig), With<camera::MainCamera>>,
+    main_camera: Query<(&camera::CameraType, &camera::CameraController), With<camera::MainCamera>>,
     state: Res<State<AppState>>,
 ) {
     let ctx = contexts.ctx_mut();
@@ -573,12 +573,12 @@ fn drop_egui_input_if_cursor_invisible(
 }
 
 fn set_cursor_visible(cursor_visible: &mut CursorVisible, window: &mut Window, visible: bool) {
-    window.cursor.grab_mode = if visible {
+    window.cursor_grab_mode = if visible {
         CursorGrabMode::None
     } else {
         CursorGrabMode::Confined
     };
-    window.cursor.visible = visible;
+    window.cursor_visible = visible;
     cursor_visible.0 = visible;
 }
 
@@ -588,7 +588,7 @@ fn cursor_grab(
     keys: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
 ) {
-    let Ok(window) = &mut windows.get_single_mut() else {
+    let Ok(window) = &mut windows.single_mut() else {
         return;
     };
     if !window.focused {
@@ -610,7 +610,7 @@ fn reset_cursor_visibility_on_tool_change(
     mut cursor_visible: ResMut<CursorVisible>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
-    if let Ok(window) = &mut windows.get_single_mut() {
+    if let Ok(window) = &mut windows.single_mut() {
         if !window.focused {
             return;
         }

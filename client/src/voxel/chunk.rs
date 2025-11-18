@@ -428,11 +428,11 @@ fn promote_draft_voxels_to_real_voxels(
 
 fn switch_materials_when_draft_chunk(
     draft_material: Res<ChunkDraftMaterial>,
-    mut chunks: Query<(Entity, &mut Handle<StandardMaterial>), Added<ChunkHasDraftVoxels>>,
+    mut chunks: Query<(Entity, &mut MeshMaterial3d<StandardMaterial>), Added<ChunkHasDraftVoxels>>,
     mut commands: Commands,
 ) {
     for (entity, mut material) in chunks.iter_mut() {
-        *material = draft_material.clone();
+        material.0 = draft_material.0.clone();
         commands.entity(entity).insert(AlphaPulse::new(0.2, 0.5));
     }
 }
@@ -440,12 +440,12 @@ fn switch_materials_when_draft_chunk(
 fn switch_materials_when_no_longer_draft_chunk(
     standard_material: Res<ChunkMaterial>,
     mut removed_draft_chunks: RemovedComponents<ChunkHasDraftVoxels>,
-    mut chunks: Query<(Entity, &mut Handle<StandardMaterial>)>,
+    mut chunks: Query<(Entity, &mut MeshMaterial3d<StandardMaterial>)>,
     mut commands: Commands,
 ) {
     for id in removed_draft_chunks.read() {
         if let Ok((entity, mut material)) = chunks.get_mut(id) {
-            *material = standard_material.clone();
+            material.0 = standard_material.0.clone();
             commands.entity(entity).remove::<AlphaPulse>();
         }
     }
@@ -468,7 +468,7 @@ fn garbage_collect_chunks(
     }
     for chunk_coords in chunks_to_remove {
         if let Some(chunk_entity) = all_chunks.remove(&chunk_coords) {
-            commands.entity(chunk_entity).despawn_recursive();
+            commands.entity(chunk_entity).despawn_descendants_recursive();
         }
     }
     let new_chunk_count = all_chunks.0.len();
@@ -481,7 +481,7 @@ fn garbage_collect_chunks(
 fn rebuild_updated_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     mut updated_chunks: Query<
-        (Entity, &ChunkData, &ChunkCoords, Option<&mut Handle<Mesh>>),
+        (Entity, &ChunkData, &ChunkCoords, Option<&mut Mesh3d>),
         Changed<ChunkData>,
     >,
     chunk_material: Res<ChunkMaterial>,
@@ -493,29 +493,26 @@ fn rebuild_updated_chunks(
     for (chunk_id, chunk_data, chunk_coords, mesh) in updated_chunks.iter_mut() {
         let handle = meshes.add(build_mesh(chunk_data, false));
         if let Some(mut mesh) = mesh {
-            *mesh = handle;
+            mesh.0 = handle;
         } else {
             let translation = chunk_coords.to_world(*chunk_size_meters);
-            commands.entity(chunk_id).insert(PbrBundle {
-                mesh: handle,
-                material: chunk_material.clone(),
-                transform: Transform::from_translation(translation)
+            commands.entity(chunk_id).insert((
+                Mesh3d(handle),
+                MeshMaterial3d(chunk_material.0.clone()),
+                Transform::from_translation(translation)
                     .with_scale(Vec3::splat(voxel_size_meters.0)),
-                ..default()
-            });
+            ));
         }
 
         commands
             .entity(chunk_id)
-            .despawn_descendants()
+            .despawn_descendants_recursive()
             .with_children(|b| {
                 let handle = meshes.add(build_mesh(chunk_data, true));
                 b.spawn((
-                    MaterialMeshBundle {
-                        mesh: handle,
-                        material: chunk_mask_material.clone(),
-                        ..default()
-                    },
+                    Mesh3d(handle),
+                    MeshMaterial3d(chunk_mask_material.clone()),
+                    Transform::default(),
                     RenderLayers::layer(MASK_CAMERA_ONLY_LAYER),
                 ));
             });
@@ -724,7 +721,7 @@ fn visualize_chunks(
     if !chunk_visualization.0 {
         return;
     }
-    let Ok((our_camera, our_camera_transform)) = our_camera.get_single() else {
+    let Ok((our_camera, our_camera_transform)) = our_camera.single() else {
         return;
     };
 

@@ -25,7 +25,8 @@ pub struct SpawnableAssetPath(pub PathBuf);
 #[derive(Bundle)]
 pub struct SpawnableBundle {
     pub asset_path: SpawnableAssetPath,
-    pub scene: SceneBundle,
+    pub scene: SceneRoot,
+    pub transform: Transform,
     pub pickable_children: PickableChildren,
     pub render_layers: RenderLayers,
     pub propagate_render_layers: rendering::PropagateRenderLayers,
@@ -34,11 +35,8 @@ impl SpawnableBundle {
     pub fn new(assets: &AssetServer, asset_path: PathBuf, transform: Transform) -> Self {
         Self {
             asset_path: SpawnableAssetPath(asset_path.clone()),
-            scene: SceneBundle {
-                scene: assets.load(GltfAssetLabel::Scene(0).from_asset(asset_path)),
-                transform,
-                ..default()
-            },
+            scene: SceneRoot(assets.load(GltfAssetLabel::Scene(0).from_asset(asset_path))),
+            transform,
             pickable_children: PickableChildren,
             render_layers: RenderLayers::from_layers(&[
                 rendering::ALL_NON_MASK_CAMERA_LAYER,
@@ -199,22 +197,19 @@ fn on_preview_create(
     if let Some(spawn_preview) = spawn_preview {
         commands
             .entity(spawn_preview.preview_id)
-            .despawn_recursive();
+            .despawn_descendants_recursive();
     }
 
     let path = set_spawn_preview.0.clone();
     let preview_id = commands
         .spawn((
-            SceneBundle {
-                scene: assets.load(GltfAssetLabel::Scene(0).from_asset(path.clone())),
-                transform: Transform::from_translation(
-                    cursor_ray_hit
-                        .coords()
-                        .map(|c| c.to_world(*voxels_per_meter))
-                        .unwrap_or_default(),
-                ),
-                ..default()
-            },
+            SceneRoot(assets.load(GltfAssetLabel::Scene(0).from_asset(path.clone()))),
+            Transform::from_translation(
+                cursor_ray_hit
+                    .coords()
+                    .map(|c| c.to_world(*voxels_per_meter))
+                    .unwrap_or_default(),
+            ),
             RaycastIgnore,
         ))
         .id();
@@ -224,7 +219,7 @@ fn on_preview_create(
 fn on_preview_destroy(spawn_preview: Res<SpawnPreview>, mut commands: Commands) {
     commands
         .entity(spawn_preview.preview_id)
-        .despawn_recursive();
+        .despawn_descendants_recursive();
     commands.remove_resource::<SpawnPreview>();
 }
 

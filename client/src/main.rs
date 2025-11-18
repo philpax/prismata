@@ -82,7 +82,7 @@ fn main() {
         .add_plugins((
             bevy_mod_reqwest::ReqwestPlugin::default(),
             transform_gizmo_bevy::TransformGizmoPlugin,
-            bevy_egui::EguiPlugin,
+            bevy_egui::EguiPlugin::default(),
             avian3d::PhysicsPlugins::default(),
             avian3d::debug_render::PhysicsDebugPlugin::default(),
             picking::plugin,

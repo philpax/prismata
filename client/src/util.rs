@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{hierarchy::Parent, prelude::*};
 
 /// Given an entity and the relevant queries, find the first parent of the entity that has
 /// the specified component. Includes the entity itself.

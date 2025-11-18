@@ -55,7 +55,7 @@ fn despawn_entities_on_play_exit(
     query: Query<Entity, With<RemoveOnPlayExit>>,
 ) {
     for entity in query.iter() {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn_descendants_recursive();
     }
 }
 
@@ -102,14 +102,11 @@ fn spawn_cubes_on_click(
         let direction = rotation * -Vec3::Z;
         let position = translation + direction * 0.1;
         commands.spawn((
-            PbrBundle {
-                mesh: cube_mesh.clone(),
-                material: cube_material.clone(),
-                transform: Transform::from_translation(position)
-                    .with_scale(Vec3::splat(cube_size.0))
-                    .with_rotation(rotation),
-                ..default()
-            },
+            Mesh3d(cube_mesh.clone()),
+            MeshMaterial3d(cube_material.clone()),
+            Transform::from_translation(position)
+                .with_scale(Vec3::splat(cube_size.0))
+                .with_rotation(rotation),
             RigidBody::Dynamic,
             Collider::cuboid(1.0, 1.0, 1.0),
             LinearVelocity(direction * 5.0),

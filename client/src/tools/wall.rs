@@ -85,22 +85,20 @@ fn create_brush(
     let id = commands
         .spawn((
             Name::new("Wall Brush"),
-            PbrBundle {
-                mesh: meshes.add(
-                    Cuboid {
-                        half_size: Vec3::splat(0.5),
-                    }
-                    .mesh(),
-                ),
-                material: materials.add(StandardMaterial {
-                    alpha_mode: AlphaMode::Blend,
-                    base_color: Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
-                    unlit: true,
-                    ..default()
-                }),
-                visibility: Visibility::Hidden,
+            Mesh3d(meshes.add(
+                Cuboid {
+                    half_size: Vec3::splat(0.5),
+                }
+                .mesh(),
+            )),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                alpha_mode: AlphaMode::Blend,
+                base_color: Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
+                unlit: true,
                 ..default()
-            },
+            })),
+            Transform::default(),
+            Visibility::Hidden,
             AlphaPulse::new(0.25, 1.0),
             RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
             RaycastIgnore,
@@ -111,7 +109,7 @@ fn create_brush(
 }
 
 fn destroy_brush(brush: Res<OurWallBrush>, mut commands: Commands) {
-    commands.entity(brush.0).despawn_recursive();
+    commands.entity(brush.0).despawn_descendants_recursive();
     commands.remove_resource::<OurWallBrush>();
     commands.remove_resource::<WallBrushState>();
 }
@@ -137,11 +135,11 @@ fn update_brush_viz(
 
     mut gizmos: Gizmos<MainCameraGizmosWithoutDepth>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tool_brushes: Query<(&mut Transform, &mut Visibility, &Handle<StandardMaterial>)>,
+    mut tool_brushes: Query<(&mut Transform, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
 ) {
     let (mut transform, mut visibility, color) = tool_brushes.get_mut(our_wall_brush.0).unwrap();
 
-    materials.get_mut(color.id()).unwrap().base_color = tool_color.base;
+    materials.get_mut(&color.0).unwrap().base_color = tool_color.base;
     match *state {
         WallBrushState::WaitingForPoint1 => {
             if let Some(hit) = voxel_under_cursor.ray_hit.filter(|_| cursor_visible.0) {

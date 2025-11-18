@@ -460,16 +460,14 @@ fn spawn_prism(
     egui_user_textures.add_image(image_handle.clone());
     commands.insert_resource(PrismMainImage(image_handle.clone()));
     commands.spawn((
-        Camera3dBundle {
-            camera: Camera {
-                order: 2,
-                target: RenderTarget::Image(image_handle),
-                clear_color: ClearColorConfig::Custom(Color::srgba(1.0, 1.0, 1.0, 1.0)),
-                ..default()
-            },
-            transform,
+        Camera3d::default(),
+        Camera {
+            order: 2,
+            target: RenderTarget::Image(image_handle),
+            clear_color: ClearColorConfig::Custom(Color::srgba(1.0, 1.0, 1.0, 1.0)),
             ..default()
         },
+        transform,
         RenderLayers::default(),
         DepthPrepass,
         PrismMainCamera,
@@ -495,16 +493,14 @@ fn spawn_prism(
     egui_user_textures.add_image(mask_image_handle.clone());
     commands.insert_resource(PrismMaskImage(mask_image_handle.clone()));
     commands.spawn((
-        Camera3dBundle {
-            camera: Camera {
-                order: 3,
-                target: RenderTarget::Image(mask_image_handle),
-                clear_color: ClearColorConfig::Custom(Color::BLACK),
-                ..default()
-            },
-            transform,
+        Camera3d::default(),
+        Camera {
+            order: 3,
+            target: RenderTarget::Image(mask_image_handle),
+            clear_color: ClearColorConfig::Custom(Color::BLACK),
             ..default()
         },
+        transform,
         RenderLayers::layer(rendering::MASK_CAMERA_ONLY_LAYER),
         PrismMaskCamera,
     ));
@@ -553,7 +549,7 @@ fn sync_game_camera_and_prism_camera(
         game_deband_dither,
         game_color_grading,
         game_exposure,
-    )) = game_camera.get_single()
+    )) = game_camera.single()
     else {
         return;
     };
@@ -587,7 +583,7 @@ fn on_use(
     prism_state: Res<PrismState>,
     prism_entity: Query<(&GlobalTransform, &Projection), With<PrismMainCamera>>,
 ) {
-    let Ok((global_transform, projection)) = prism_entity.get_single() else {
+    let Ok((global_transform, projection)) = prism_entity.single() else {
         return;
     };
     if !prism_state.is_waiting_for_capture() {
@@ -807,15 +803,12 @@ fn handle_render_complete_event(
 
     let preview_entity = commands
         .spawn((
-            PbrBundle {
-                mesh: preview_mesh.0.clone(),
-                material: preview_material.0.clone(),
-                transform: Transform {
-                    translation: Vec3::from_array(input.camera_position),
-                    rotation: Quat::from_array(input.camera_rotation),
-                    scale: Vec3::ONE,
-                },
-                ..default()
+            Mesh3d(preview_mesh.0.clone()),
+            MeshMaterial3d(preview_material.0.clone()),
+            Transform {
+                translation: Vec3::from_array(input.camera_position),
+                rotation: Quat::from_array(input.camera_rotation),
+                scale: Vec3::ONE,
             },
             bevy::picking::Pickable::default(),
         ))
@@ -1280,14 +1273,14 @@ fn ui(
                     }
                 };
 
-                commands.entity(rendered.preview_entity).despawn_recursive();
+                commands.entity(rendered.preview_entity).despawn_descendants_recursive();
 
                 *prism_state = PrismState::Projecting {
                     start_time: web_time::Instant::now(),
                     request_id,
                 };
             } else if retake_requested {
-                commands.entity(rendered.preview_entity).despawn_recursive();
+                commands.entity(rendered.preview_entity).despawn_descendants_recursive();
                 *prism_state = PrismState::default();
             }
             // These are separate to avoid mutably borrowing the state unless necessary

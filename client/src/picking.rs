@@ -1,4 +1,5 @@
 use bevy::{
+    hierarchy::Parent,
     picking::{events::Click, mesh_picking::MeshPickingPlugin, pointer::PointerId, prelude::*},
     prelude::*,
 };
@@ -31,13 +32,13 @@ pub fn plugin(app: &mut App) {
 fn process_pickable_children(
     pickable_children_query: Query<Entity, With<PickableChildren>>,
     children_query: Query<&Children>,
-    mesh_query: Query<&Handle<Mesh>, Without<Pickable>>,
+    mesh_query: Query<&Mesh3d, Without<Pickable>>,
     mut commands: Commands,
 ) {
     fn add_pickable(
         entity: Entity,
         children_query: &Query<&Children>,
-        mesh_query: &Query<&Handle<Mesh>, Without<Pickable>>,
+        mesh_query: &Query<&Mesh3d, Without<Pickable>>,
         commands: &mut Commands,
     ) {
         if mesh_query.contains(entity) {

@@ -131,9 +131,8 @@ fn setup(
 
     // Sun
     commands.spawn((
-        DirectionalLightBundle {
-            ..Default::default()
-        },
+        DirectionalLight::default(),
+        Transform::default(),
         Sun, // Marks the light as Sun
     ));
     commands.insert_resource(SunAngle(90.0f32.to_radians()));
@@ -142,16 +141,14 @@ fn setup(
     let base_color = Color::from(SILVER);
     commands.spawn((
         Floor,
-        PbrBundle {
-            mesh: meshes.add(
-                Plane3d::default()
-                    .mesh()
-                    .size(PLANE_SIZE, PLANE_SIZE)
-                    .subdivisions(1),
-            ),
-            material: materials.add(base_color),
-            ..default()
-        },
+        Mesh3d(meshes.add(
+            Plane3d::default()
+                .mesh()
+                .size(PLANE_SIZE, PLANE_SIZE)
+                .subdivisions(1),
+        )),
+        MeshMaterial3d(materials.add(base_color)),
+        Transform::default(),
         RaycastIgnore,
         ColliderConstructor::TrimeshFromMesh,
         RigidBody::Static,
@@ -163,25 +160,25 @@ fn setup(
 fn run_alpha_pulse(
     mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
-    tool_brush: Query<(&AlphaPulse, &Handle<StandardMaterial>)>,
+    tool_brush: Query<(&AlphaPulse, &MeshMaterial3d<StandardMaterial>)>,
 ) {
-    for (AlphaPulse { magnitude, period }, material) in tool_brush.iter() {
-        let material = materials.get_mut(material).unwrap();
+    for (AlphaPulse { magnitude, period }, material_handle) in tool_brush.iter() {
+        let material = materials.get_mut(&material_handle.0).unwrap();
         material.base_color.set_alpha(
-            (1.0 - *magnitude) + *magnitude * (time.elapsed_seconds() * TAU / *period).sin(),
+            (1.0 - *magnitude) + *magnitude * (time.elapsed_secs() * TAU / *period).sin(),
         );
     }
 }
 
 fn update_floor_color(
-    floor: Query<&Handle<StandardMaterial>, With<Floor>>,
+    floor: Query<&MeshMaterial3d<StandardMaterial>, With<Floor>>,
     floor_color: Res<FloorColor>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let Ok(floor_material) = floor.get_single() else {
+    let Ok(floor_material) = floor.single() else {
         return;
     };
-    let material = materials.get_mut(floor_material.id()).unwrap();
+    let material = materials.get_mut(&floor_material.0).unwrap();
     material.base_color = floor_color.0;
 }
 
@@ -191,7 +188,7 @@ fn update_sun(
     sun_angle: Res<SunAngle>,
 ) {
     use light_consts::lux::AMBIENT_DAYLIGHT;
-    let Ok((mut light_trans, mut directional)) = query.get_single_mut() else {
+    let Ok((mut light_trans, mut directional)) = query.single_mut() else {
         return;
     };
     let t = sun_angle.0;

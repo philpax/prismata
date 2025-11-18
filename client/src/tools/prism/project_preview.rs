@@ -1,4 +1,5 @@
 use bevy::{
+    hierarchy::Parent,
     prelude::*,
     render::{mesh::Indices, render_asset::RenderAssetUsages, render_resource::*},
 };
@@ -68,13 +69,13 @@ fn regenerate_entity_on_state_change(
         if let Some(entity) = commands.get_entity(entity) {
             // Should be taken care of by the preview entity being despawned,
             // but just in case
-            entity.despawn_recursive();
+            entity.despawn_descendants_recursive();
         }
     }
     if let PrismState::Rendered(rendered) = &*state {
         info!("Updating preview entity");
         let global_transform = global_transform_query.get(rendered.preview_entity).unwrap();
-        let global_transform_inv = global_transform.compute_matrix().inverse();
+        let global_transform_inv = Mat4::from(global_transform.affine()).inverse();
 
         let mut splats = ProjectionRequest::from_rendered(rendered, global_transform)
             .calculate_data(*voxel_size_meters);
@@ -88,20 +89,18 @@ fn regenerate_entity_on_state_change(
 
         let id = commands
             .spawn((
-                PbrBundle {
-                    mesh: meshes.add(generate_splat_mesh(&splats)),
-                    material: materials.add(StandardMaterial {
-                        unlit: true,
-                        ..default()
-                    }),
+                Mesh3d(meshes.add(generate_splat_mesh(&splats))),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    unlit: true,
                     ..default()
-                },
+                })),
+                Transform::default(),
                 RaycastIgnore,
             ))
             .id();
         commands
             .entity(rendered.preview_entity)
-            .push_children(&[id]);
+            .add_children(&[id]);
         preview_viz_entity.0 = Some(id);
     };
 

@@ -80,7 +80,7 @@ pub fn clear_all(world: &mut World) {
         .iter(world)
         .collect();
     for entity in entities {
-        world.entity_mut(entity).despawn_recursive();
+        world.entity_mut(entity).despawn_descendants_recursive();
     }
     info!("Cleared all chunks");
 }
@@ -102,7 +102,7 @@ fn update_sizes(
 
     if voxels_per_meter != old_voxels_per_meter.0 {
         // Only clear the world if the VPM has *actually* changed
-        commands.add(|world: &mut World| {
+        commands.queue(|world: &mut World| {
             clear_all(world);
         });
     }

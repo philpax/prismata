@@ -26,6 +26,7 @@ egui-notify = "0.17"
 egui-phosphor = "0.7"
 egui_plot = "0.33"
 futures-intrusive = "0.5.0"
+getrandom = { version = "0.2", features = ["js"] }
 git-version = "0.3"
 image = { version = "0.25.2", default-features = false, features = [
     "png",

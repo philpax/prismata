@@ -49,17 +49,15 @@ fn create_brush(
     let id = commands
         .spawn((
             Name::new("Eraser Brush"),
-            PbrBundle {
-                mesh: meshes.add(Sphere { radius: 1.0 }.mesh().ico(5).unwrap()),
-                material: materials.add(StandardMaterial {
-                    alpha_mode: AlphaMode::Blend,
-                    base_color: Color::linear_rgba(1.0, 0.0, 0.0, 1.0),
-                    unlit: true,
-                    ..default()
-                }),
-                visibility: Visibility::Hidden,
+            Mesh3d(meshes.add(Sphere { radius: 1.0 }.mesh().ico(5).unwrap())),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                alpha_mode: AlphaMode::Blend,
+                base_color: Color::linear_rgba(1.0, 0.0, 0.0, 1.0),
+                unlit: true,
                 ..default()
-            },
+            })),
+            Transform::default(),
+            Visibility::Hidden,
             AlphaPulse::new(0.25, 0.5),
             RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
             RaycastIgnore,
@@ -69,7 +67,7 @@ fn create_brush(
 }
 
 fn destroy_brush(brush: Res<OurEraserBrush>, mut commands: Commands) {
-    commands.entity(brush.0).despawn_recursive();
+    commands.entity(brush.0).despawn_descendants_recursive();
     commands.remove_resource::<OurEraserBrush>();
 }
 

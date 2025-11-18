@@ -1,4 +1,5 @@
 use bevy::{
+    hierarchy::Parent,
     input::mouse::{MouseMotion, MouseWheel},
     pbr::Atmosphere,
     picking::mesh_picking::ray_cast::MeshRayCast,
@@ -115,10 +116,8 @@ fn setup(mut commands: Commands) {
         MainCamera,
         CameraType::Free,
         CameraController::new_fpv(transform.translation, target),
-        Camera3dBundle {
-            transform,
-            ..default()
-        },
+        Camera3d::default(),
+        transform,
         #[cfg(feature = "webgpu")]
         Atmosphere::EARTH,
         render_layers.clone(),
@@ -129,14 +128,12 @@ fn setup(mut commands: Commands) {
         SecondaryCamera,
         CameraType::Orbit,
         CameraController::new_orbit(transform.translation, target),
-        Camera3dBundle {
-            camera: Camera {
-                is_active: false,
-                ..default()
-            },
-            transform,
+        Camera3d::default(),
+        Camera {
+            is_active: false,
             ..default()
         },
+        transform,
         #[cfg(feature = "webgpu")]
         Atmosphere::EARTH,
         render_layers,
@@ -174,10 +171,10 @@ fn swap_camera(
     if !keys.just_pressed(KeyCode::KeyT) {
         return;
     }
-    let Ok((e_main, mut cam_main, transform_main, controller_main)) = q_main.get_single_mut() else {
+    let Ok((e_main, mut cam_main, transform_main, controller_main)) = q_main.single_mut() else {
         return;
     };
-    let Ok((e_sec, mut cam_sec, type_sec, mut controller_sec)) = q_sec.get_single_mut() else {
+    let Ok((e_sec, mut cam_sec, type_sec, mut controller_sec)) = q_sec.single_mut() else {
         return;
     };
     commands
@@ -245,7 +242,7 @@ pub fn update_camera(
     mut scroll_events: EventReader<MouseWheel>,
     mut main_camera_query: Query<(&CameraType, &mut CameraController), With<MainCamera>>,
 ) {
-    let time_delta_seconds: f32 = time.delta_seconds();
+    let time_delta_seconds: f32 = time.delta_secs();
     let boost_mult = 5.0f32;
     let slow_mult = 0.25f32;
     let sensitivity = Vec2::splat(1.0);
@@ -364,7 +361,7 @@ fn draw_orbit_camera_target(
     mut gizmos: Gizmos<MainCameraGizmos>,
     main_camera_query: Query<(&CameraType, &CameraController), With<MainCamera>>,
 ) {
-    let Ok((camera_type, controller)) = main_camera_query.get_single() else {
+    let Ok((camera_type, controller)) = main_camera_query.single() else {
         return;
     };
 
@@ -381,10 +378,10 @@ fn sync_primary_and_secondary_camera_transforms(
     q_main: Query<&CameraController, (With<MainCamera>, Without<SecondaryCamera>)>,
     mut q_sec: Query<&mut CameraController, (With<SecondaryCamera>, Without<MainCamera>)>,
 ) {
-    let Ok(controller_main) = q_main.get_single() else {
+    let Ok(controller_main) = q_main.single() else {
         return;
     };
-    let Ok(mut controller_sec) = q_sec.get_single_mut() else {
+    let Ok(mut controller_sec) = q_sec.single_mut() else {
         return;
     };
 

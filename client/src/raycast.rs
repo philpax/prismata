@@ -1,4 +1,5 @@
 use bevy::{
+    hierarchy::Parent,
     picking::mesh_picking::{ray_cast::MeshRayCast, MeshRayCastSettings},
     prelude::*,
     window::PrimaryWindow,
@@ -135,14 +136,14 @@ pub fn update_world_rayhits(
     main_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
 ) {
     let Some(cursor_position) = primary_window
-        .get_single()
+        .single()
         .ok()
         .and_then(|w| w.cursor_position())
     else {
         return;
     };
 
-    let Ok((camera, camera_transform)) = main_camera.get_single() else {
+    let Ok((camera, camera_transform)) = main_camera.single() else {
         return;
     };
 

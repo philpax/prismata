@@ -32,7 +32,7 @@ impl ProjectionRequest {
     ) -> Self {
         let world = global_transform.compute_transform();
         let projection = Mat4::from_cols_array(&rendered.input.camera_projection);
-        let view = world.compute_matrix().inverse();
+        let view = Mat4::from(GlobalTransform::from(world).affine()).inverse();
         let view_projection = projection * view;
 
         ProjectionRequest {

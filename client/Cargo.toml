@@ -6,7 +6,32 @@ edition = "2021"
 [dependencies]
 anyhow = { workspace = true }
 avian3d = { workspace = true }
-bevy = { workspace = true, features = ["default"] }
+bevy = { workspace = true, features = [
+    "animation",
+    "bevy_asset",
+    "bevy_color",
+    "bevy_scene",
+    "bevy_state",
+    "bevy_winit",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_picking",
+    "bevy_gltf",
+    "bevy_render",
+    "bevy_sprite",
+    "bevy_text",
+    "bevy_ui",
+    "multi_threaded",
+    "png",
+    "hdr",
+    "x11",
+    "bevy_gizmos",
+    "tonemapping_luts",
+    "smaa_luts",
+    "default_font",
+    "webgl2",
+    "sysinfo_plugin",
+] }
 bevy_async_task = { workspace = true }
 bevy_egui = { workspace = true }
 bevy_embedded_assets = { workspace = true }
@@ -25,6 +50,7 @@ egui-notify = { workspace = true }
 egui-phosphor = { workspace = true }
 egui_plot = { workspace = true }
 futures-intrusive = { workspace = true }
+getrandom = { workspace = true }
 git-version = { workspace = true }
 image = { workspace = true }
 rand = { workspace = true }
