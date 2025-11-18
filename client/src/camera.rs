@@ -5,7 +5,6 @@ use bevy::{
     prelude::*,
     render::view::RenderLayers,
 };
-use bevy_dolly::prelude::*;
 use bevy_egui::egui;
 
 use crate::{
@@ -23,17 +22,55 @@ pub struct MainCamera;
 #[derive(Component)]
 pub struct SecondaryCamera;
 
-#[derive(Component, PartialEq, Eq)]
+#[derive(Component, PartialEq, Eq, Clone, Copy)]
 pub enum CameraType {
     Free,
     Orbit,
 }
+
 impl std::fmt::Display for CameraType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CameraType::Free => write!(f, "Free"),
             CameraType::Orbit => write!(f, "Orbit"),
         }
+    }
+}
+
+/// Camera controller component that stores camera state
+#[derive(Component)]
+pub struct CameraController {
+    pub position: Vec3,
+    pub yaw: f32,   // radians
+    pub pitch: f32, // radians
+    pub target: Vec3, // For orbit camera
+}
+
+impl CameraController {
+    pub fn new_fpv(position: Vec3, looking_at: Vec3) -> Self {
+        let direction = (looking_at - position).normalize();
+        let yaw = direction.x.atan2(direction.z);
+        let pitch = (-direction.y).asin();
+
+        Self {
+            position,
+            yaw,
+            pitch,
+            target: looking_at,
+        }
+    }
+
+    pub fn new_orbit(position: Vec3, target: Vec3) -> Self {
+        Self {
+            position,
+            yaw: 0.0,
+            pitch: 0.0,
+            target,
+        }
+    }
+
+    pub fn distance_to_target(&self) -> f32 {
+        self.position.distance(self.target)
     }
 }
 
@@ -44,8 +81,7 @@ pub fn plugin(app: &mut App) {
             swap_camera,
             update_camera.run_if(is_cursor_invisible),
             sync_primary_and_secondary_camera_transforms,
-            Dolly::<MainCamera>::update_active,
-            Dolly::<SecondaryCamera>::update_active,
+            apply_camera_controller,
             draw_orbit_camera_target.run_if(is_cursor_invisible),
         )
             .chain(),
@@ -54,16 +90,14 @@ pub fn plugin(app: &mut App) {
 
 pub fn ui_top_right_panel(
     ui: &mut egui::Ui,
-    main_camera: Query<(&CameraType, &Rig), With<MainCamera>>,
+    main_camera: Query<(&CameraType, &CameraController), With<MainCamera>>,
 ) {
-    let (camera_type, rig) = main_camera.single();
+    let (camera_type, controller) = main_camera.single();
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Camera:").underline());
         ui.label(camera_type.to_string());
-        if let (Some(position), Some(lookat)) =
-            (rig.try_driver::<Position>(), rig.try_driver::<LookAt>())
-        {
-            let distance = position.position.distance(lookat.target);
+        if *camera_type == CameraType::Orbit {
+            let distance = controller.distance_to_target();
             ui.label(format!("({distance:.2}m)"));
         }
     });
@@ -76,12 +110,11 @@ fn setup(mut commands: Commands) {
     let transform = Transform::from_xyz(-0.45, 0.45, -0.45).looking_at(target, Vec3::Y);
     let render_layers =
         RenderLayers::from_layers(&[ALL_NON_MASK_CAMERA_LAYER, MAIN_CAMERA_ONLY_LAYER]);
+
     commands.spawn((
         MainCamera,
         CameraType::Free,
-        Rig::builder()
-            .with(Fpv::from_position_target(transform))
-            .build(),
+        CameraController::new_fpv(transform.translation, target),
         Camera3dBundle {
             transform,
             ..default()
@@ -91,13 +124,11 @@ fn setup(mut commands: Commands) {
         render_layers.clone(),
         transform_gizmo_bevy::GizmoCamera,
     ));
+
     commands.spawn((
         SecondaryCamera,
         CameraType::Orbit,
-        Rig::builder()
-            .with(Position::new(target))
-            .with(LookAt::new(target))
-            .build(),
+        CameraController::new_orbit(transform.translation, target),
         Camera3dBundle {
             camera: Camera {
                 is_active: false,
@@ -124,11 +155,11 @@ fn swap_camera(
     mut world_raycast: MeshRayCast,
     mut commands: Commands,
     mut q_main: Query<
-        (Entity, &mut Camera, &GlobalTransform),
+        (Entity, &mut Camera, &GlobalTransform, &CameraController),
         (With<MainCamera>, Without<SecondaryCamera>),
     >,
     mut q_sec: Query<
-        (Entity, &mut Camera, &CameraType, &mut Rig),
+        (Entity, &mut Camera, &CameraType, &mut CameraController),
         (With<SecondaryCamera>, Without<MainCamera>),
     >,
 
@@ -143,10 +174,10 @@ fn swap_camera(
     if !keys.just_pressed(KeyCode::KeyT) {
         return;
     }
-    let Ok((e_main, mut cam_main, transform_main)) = q_main.get_single_mut() else {
+    let Ok((e_main, mut cam_main, transform_main, controller_main)) = q_main.get_single_mut() else {
         return;
     };
-    let Ok((e_sec, mut cam_sec, type_sec, mut rig_sec)) = q_sec.get_single_mut() else {
+    let Ok((e_sec, mut cam_sec, type_sec, mut controller_sec)) = q_sec.get_single_mut() else {
         return;
     };
     commands
@@ -202,7 +233,7 @@ fn swap_camera(
         } else {
             fallback_location
         };
-        rig_sec.driver_mut::<LookAt>().target = target;
+        controller_sec.target = target;
     }
 }
 
@@ -212,7 +243,7 @@ pub fn update_camera(
     voxel_size_meters: Res<VoxelSizeMeters>,
     mut mouse_motion_events: EventReader<MouseMotion>,
     mut scroll_events: EventReader<MouseWheel>,
-    mut main_camera_query: Query<(&mut Rig, &GlobalTransform), With<MainCamera>>,
+    mut main_camera_query: Query<(&CameraType, &mut CameraController), With<MainCamera>>,
 ) {
     let time_delta_seconds: f32 = time.delta_seconds();
     let boost_mult = 5.0f32;
@@ -258,107 +289,107 @@ pub fn update_camera(
     delta.x *= sensitivity.x;
     delta.y *= sensitivity.y;
 
-    let (mut rig, transform) = main_camera_query.single_mut();
+    let (camera_type, mut controller) = main_camera_query.single_mut();
 
-    if let Some(rig) = rig.try_driver_mut::<Fpv>() {
-        rig.update_pos_rot(move_vec, delta, false, speed, time_delta_seconds);
-        let position = &mut rig.driver_mut::<Position>().position;
-        position.y = position.y.max(0.);
-    } else {
-        let mut position = rig.driver::<Position>().position;
-        let mut target = rig.driver::<LookAt>().target;
-        let mut distance = position.distance(target);
-        let rotation = transform.to_scale_rotation_translation().1;
+    match camera_type {
+        CameraType::Free => {
+            // Update yaw and pitch from mouse delta
+            controller.yaw -= delta.x.to_radians() * 0.5;
+            controller.pitch -= delta.y.to_radians() * 0.5;
+            controller.pitch = controller.pitch.clamp(-89.9f32.to_radians(), 89.9f32.to_radians());
 
-        for event in scroll_events.read() {
-            distance -= speed * normalize_scroll_wheel(event) * scroll_sensitivity;
+            // Calculate movement in camera space
+            let rotation = Quat::from_euler(EulerRot::YXZ, controller.yaw, controller.pitch, 0.0);
+            let movement = rotation * move_vec * speed * time_delta_seconds;
+            controller.position += movement;
+            controller.position.y = controller.position.y.max(0.);
         }
-        distance = distance.clamp(
-            orbit_min_distance(*voxel_size_meters),
-            orbit_max_distance(*voxel_size_meters),
-        );
+        CameraType::Orbit => {
+            let mut distance = controller.distance_to_target();
 
-        let (mut yaw, mut pitch, _) = rotation.to_euler(EulerRot::YXZ);
-        yaw -= delta.x.to_radians();
-        pitch -= delta.y.to_radians();
-        pitch = pitch.clamp(-89.9f32.to_radians(), 89.9f32.to_radians());
-        let rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
-        position = target + rotation.mul_vec3(Vec3::Z * distance);
+            for event in scroll_events.read() {
+                distance -= speed * normalize_scroll_wheel(event) * scroll_sensitivity;
+            }
+            distance = distance.clamp(
+                orbit_min_distance(*voxel_size_meters),
+                orbit_max_distance(*voxel_size_meters),
+            );
 
-        let position_delta = rotation * move_vec * speed * time_delta_seconds;
-        position += position_delta;
-        target += position_delta;
+            // Calculate rotation from position to target
+            let offset = controller.position - controller.target;
+            let current_rotation = Quat::from_rotation_arc(Vec3::Z, offset.normalize());
+            let (mut yaw, mut pitch, _) = current_rotation.to_euler(EulerRot::YXZ);
 
-        position.y = position.y.max(0.);
-        target.y = target.y.max(0.);
+            yaw -= delta.x.to_radians();
+            pitch -= delta.y.to_radians();
+            pitch = pitch.clamp(-89.9f32.to_radians(), 89.9f32.to_radians());
 
-        rig.driver_mut::<Position>().position = position;
-        rig.driver_mut::<LookAt>().target = target;
+            let rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
+            controller.position = controller.target + rotation.mul_vec3(Vec3::Z * distance);
+
+            let position_delta = rotation * move_vec * speed * time_delta_seconds;
+            controller.position += position_delta;
+            controller.target += position_delta;
+
+            controller.position.y = controller.position.y.max(0.);
+            controller.target.y = controller.target.y.max(0.);
+        }
+    }
+}
+
+/// System that applies camera controller state to the actual Transform
+fn apply_camera_controller(
+    mut cameras: Query<(&CameraType, &CameraController, &mut Transform)>,
+) {
+    for (camera_type, controller, mut transform) in &mut cameras {
+        transform.translation = controller.position;
+
+        match camera_type {
+            CameraType::Free => {
+                transform.rotation = Quat::from_euler(
+                    EulerRot::YXZ,
+                    controller.yaw,
+                    controller.pitch,
+                    0.0
+                );
+            }
+            CameraType::Orbit => {
+                transform.look_at(controller.target, Vec3::Y);
+            }
+        }
     }
 }
 
 fn draw_orbit_camera_target(
     mut gizmos: Gizmos<MainCameraGizmos>,
-    main_camera_query: Query<&Rig, With<MainCamera>>,
+    main_camera_query: Query<(&CameraType, &CameraController), With<MainCamera>>,
 ) {
-    let Some(look_at) = main_camera_query
-        .get_single()
-        .ok()
-        .and_then(|r| r.try_driver::<LookAt>())
-    else {
+    let Ok((camera_type, controller)) = main_camera_query.get_single() else {
         return;
     };
 
+    if *camera_type != CameraType::Orbit {
+        return;
+    }
+
     let size = 0.5;
-    let position = look_at.target;
+    let position = controller.target;
     draw_gizmo_cross(&mut gizmos, position, size);
 }
 
 fn sync_primary_and_secondary_camera_transforms(
-    q_main: Query<(&Rig, &GlobalTransform), (With<MainCamera>, Without<SecondaryCamera>)>,
-    mut q_sec: Query<&mut Rig, (With<SecondaryCamera>, Without<MainCamera>)>,
+    q_main: Query<&CameraController, (With<MainCamera>, Without<SecondaryCamera>)>,
+    mut q_sec: Query<&mut CameraController, (With<SecondaryCamera>, Without<MainCamera>)>,
 ) {
-    let Ok((rig_main, transform_main)) = q_main.get_single() else {
+    let Ok(controller_main) = q_main.get_single() else {
         return;
     };
-    let Ok(mut rig_sec) = q_sec.get_single_mut() else {
+    let Ok(mut controller_sec) = q_sec.get_single_mut() else {
         return;
     };
-    if let Some((position, rotation)) = get_rig_position_rotation(rig_main, transform_main) {
-        set_rig_position_rotation(&mut rig_sec, position, rotation);
-    }
-}
 
-fn get_rig_position_rotation(rig: &Rig, transform: &GlobalTransform) -> Option<(Vec3, (f32, f32))> {
-    let rig = rig
-        .try_driver::<Fpv>()
-        .map(|r| r as &CameraRig)
-        .unwrap_or(rig);
-    Some((
-        rig.try_driver::<Position>()?.position,
-        rig.try_driver::<YawPitch>()
-            .map(|yp| (yp.yaw_degrees, yp.pitch_degrees))
-            .unwrap_or_else(|| {
-                let rotation = transform
-                    .to_scale_rotation_translation()
-                    .1
-                    .to_euler(EulerRot::YXZ);
-                (rotation.0.to_degrees(), rotation.1.to_degrees())
-            }),
-    ))
-}
-
-fn set_rig_position_rotation(rig: &mut Rig, position: Vec3, rotation: (f32, f32)) {
-    let rig = if let Some(rig) = rig.try_driver_mut::<Fpv>() {
-        rig as &mut CameraRig
-    } else {
-        rig
-    };
-    if let Some(position_driver) = rig.try_driver_mut::<Position>() {
-        position_driver.position = position;
-    }
-    if let Some(yaw_pitch_driver) = rig.try_driver_mut::<YawPitch>() {
-        yaw_pitch_driver.yaw_degrees = rotation.0;
-        yaw_pitch_driver.pitch_degrees = rotation.1;
-    }
+    controller_sec.position = controller_main.position;
+    controller_sec.yaw = controller_main.yaw;
+    controller_sec.pitch = controller_main.pitch;
+    controller_sec.target = controller_main.target;
 }

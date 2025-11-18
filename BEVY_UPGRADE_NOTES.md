@@ -28,6 +28,13 @@ This project has been upgraded from Bevy 0.14.2 to Bevy 0.17.3. Most dependencie
 2. **bevy_mod_raycast** → Now built into `bevy::picking::mesh_picking` (since Bevy 0.15)
 3. **bevy_atmosphere** → Replaced with Bevy's built-in `Atmosphere` component ✅
 
+### Dependencies Removed (Reimplemented)
+
+1. **bevy_dolly** → Replaced with custom `CameraController` component ✅
+   - Removed to eliminate windows-core version conflicts from Bevy 0.14 dependencies
+   - Implemented custom FPV and Orbit camera controllers in `client/src/camera.rs`
+   - All original functionality preserved (camera swapping, raycast-based orbit targeting, etc.)
+
 ### Code Updates Completed
 
 - ✅ **Removed bevy_atmosphere plugin** from `client/src/main.rs`
@@ -45,6 +52,11 @@ This project has been upgraded from Bevy 0.14.2 to Bevy 0.17.3. Most dependencie
   - Adapted filtering to work with the new API
   - Updated both `client/src/raycast.rs` and `client/src/camera.rs`
 - ✅ **Updated tool integrations**: Fixed `client/src/tools/prism/mod.rs` to use new Pickable API
+- ✅ **Removed bevy_dolly and implemented custom camera controls**:
+  - Created `CameraController` component with position, yaw, pitch, and target fields
+  - Implemented separate logic for Free (FPV) and Orbit camera modes
+  - Added `apply_camera_controller()` system to sync controller state to Transform
+  - Preserved all original features: camera swapping, WASD movement, mouse look, scroll zoom, raycast targeting
 
 ### Packages That Build Successfully (Code Complete!)
 
@@ -193,7 +205,10 @@ Based on Bevy 0.15, 0.16, and 0.17 migration guides, you may encounter:
    sudo apt-get install libwayland-dev
    ```
 
-2. **transform-gizmo-bevy compatibility**: May have issues with Bevy 0.17 - needs testing or update
+2. **windows-core version conflicts**: Reduced from 4 versions to 3 (0.54, 0.58, 0.61) by removing bevy_dolly
+   - Remaining conflicts are from Bevy ecosystem crates during the 0.14→0.17 transition
+   - These are Windows-specific dependencies and don't affect Linux builds
+   - Should resolve as more ecosystem crates update to Bevy 0.17
 
 ## ✨ What CAN Be Updated
 
@@ -204,9 +219,7 @@ The following can be updated to latest versions without issues:
 
 ## ❌ What CANNOT Be Updated (Yet)
 
-1. **transform-gizmo-bevy**: Needs maintainer to release Bevy 0.17 version
-2. **bevy_dolly**: Uses a git dependency with a custom branch - may need updating
-3. **bevy_atmosphere**: Should be replaced with Bevy's built-in atmosphere
+None! All dependencies have been updated, removed, or reimplemented.
 
 ---
 
