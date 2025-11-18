@@ -92,7 +92,9 @@ pub fn ui_top_right_panel(
     ui: &mut egui::Ui,
     main_camera: Query<(&CameraType, &CameraController), With<MainCamera>>,
 ) {
-    let (camera_type, controller) = main_camera.single();
+    let Ok((camera_type, controller)) = main_camera.single() else {
+        return;
+    };
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Camera:").underline());
         ui.label(camera_type.to_string());
@@ -109,7 +111,7 @@ fn setup(mut commands: Commands) {
     let target = Vec3::new(0., 0.45, 0.);
     let transform = Transform::from_xyz(-0.45, 0.45, -0.45).looking_at(target, Vec3::Y);
     let render_layers =
-        RenderLayers::from_layers(&[ALL_NON_MASK_CAMERA_LAYER, MAIN_CAMERA_ONLY_LAYER]);
+        RenderLayers::from_layers(&[ALL_NON_MASK_CAMERA_LAYER as usize, MAIN_CAMERA_ONLY_LAYER as usize]);
 
     commands.spawn((
         MainCamera,
@@ -205,7 +207,7 @@ fn swap_camera(
             &raycast_ignores,
             &parents,
             *voxel_size_meters,
-            Ray3d::new(origin, direction),
+            Ray3d::new(origin, Dir3::new(direction).unwrap()),
             orbit_max_distance(*voxel_size_meters),
             false,
         );
@@ -237,8 +239,8 @@ pub fn update_camera(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     voxel_size_meters: Res<VoxelSizeMeters>,
-    mut mouse_motion_events: EventReader<MouseMotion>,
-    mut scroll_events: EventReader<MouseWheel>,
+    mut mouse_motion_events: MessageReader<MouseMotion>,
+    mut scroll_events: MessageReader<MouseWheel>,
     mut main_camera_query: Query<(&CameraType, &mut CameraController), With<MainCamera>>,
 ) {
     let time_delta_seconds: f32 = time.delta_secs();
@@ -285,7 +287,9 @@ pub fn update_camera(
     delta.x *= sensitivity.x;
     delta.y *= sensitivity.y;
 
-    let (camera_type, mut controller) = main_camera_query.single_mut();
+    let Ok((camera_type, mut controller)) = main_camera_query.single_mut() else {
+        return;
+    };
 
     match camera_type {
         CameraType::Free => {

@@ -52,7 +52,7 @@ fn create_brush(
             Transform::default(),
             Visibility::Hidden,
             AlphaPulse::new(0.25, 0.5),
-            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
         ))
         .id();

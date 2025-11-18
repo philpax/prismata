@@ -5210,11 +5210,13 @@ dependencies = [
  "crossbeam-channel",
  "data-encoding",
  "doc_consts",
+ "ecolor 0.28.1",
  "egui-aesthetix",
  "egui-notify",
  "egui-phosphor",
  "egui_dock",
  "egui_plot",
+ "epaint 0.28.1",
  "futures-intrusive",
  "getrandom 0.2.15",
  "git-version",
@@ -5230,6 +5232,7 @@ dependencies = [
  "transform-gizmo-bevy",
  "wasm-bindgen-futures",
  "web-time",
+ "wgpu",
  "zip",
 ]
 
@@ -7107,6 +7110,7 @@ dependencies = [
  "js-sys",
  "log",
  "naga",
+ "parking_lot",
  "portable-atomic",
  "profiling",
  "raw-window-handle",
@@ -7145,6 +7149,7 @@ dependencies = [
  "smallvec",
  "thiserror 2.0.17",
  "wgpu-core-deps-apple",
+ "wgpu-core-deps-emscripten",
  "wgpu-core-deps-wasm",
  "wgpu-core-deps-windows-linux-android",
  "wgpu-hal",
@@ -7156,6 +7161,15 @@ name = "wgpu-core-deps-apple"
 version = "26.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18ae5fbde6a4cbebae38358aa73fcd6e0f15c6144b67ef5dc91ded0db125dbdf"
+dependencies = [
+ "wgpu-hal",
+]
+
+[[package]]
+name = "wgpu-core-deps-emscripten"
+version = "26.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7670e390f416006f746b4600fdd9136455e3627f5bd763abf9a65daa216dd2d"
 dependencies = [
  "wgpu-hal",
 ]

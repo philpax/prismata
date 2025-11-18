@@ -50,7 +50,7 @@ impl SpawnableBundle {
 }
 
 pub fn plugin(app: &mut App) {
-    app.add_event::<SetSpawnPreview>()
+    app.add_message::<SetSpawnPreview>()
         .add_systems(Startup, startup)
         .add_systems(
             Update,
@@ -98,7 +98,7 @@ struct SpawnPreview {
 #[derive(Resource)]
 struct AssetPacks(Vec<AssetPack>);
 
-#[derive(Event)]
+#[derive(Message)]
 struct SetSpawnPreview(PathBuf);
 
 #[derive(Debug, Clone)]
@@ -189,7 +189,7 @@ fn on_preview_create(
     assets: Res<AssetServer>,
     voxels_per_meter: Res<voxel::VoxelsPerMeter>,
     spawn_preview: Option<Res<SpawnPreview>>,
-    mut set_spawn_preview: EventReader<SetSpawnPreview>,
+    mut set_spawn_preview: MessageReader<SetSpawnPreview>,
     mut commands: Commands,
 ) {
     let Some(set_spawn_preview) = set_spawn_preview.read().last() else {
@@ -303,7 +303,7 @@ pub fn ui_top_left_panel(ui: &mut egui::Ui, world: &mut World) {
     });
 
     if let Some(path) = spawn_preview_path {
-        world.send_event(SetSpawnPreview(path));
+        world.write_message(SetSpawnPreview(path));
     }
 }
 

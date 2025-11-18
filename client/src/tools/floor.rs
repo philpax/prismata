@@ -99,7 +99,7 @@ fn create_brush(
             Transform::default(),
             Visibility::Hidden,
             AlphaPulse::new(0.25, 1.0),
-            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
         ))
         .id();
@@ -115,7 +115,7 @@ fn destroy_brush(brush: Res<OurFloorBrush>, mut commands: Commands) {
 
 fn update_floor_width(
     mut state: ResMut<FloorBrushState>,
-    mut mouse_motion_events: EventReader<MouseMotion>,
+    mut mouse_motion_events: MessageReader<MouseMotion>,
 ) {
     if let FloorBrushState::Ready { width, .. } = &mut *state {
         *width += mouse_motion_events.read().map(|e| e.delta.x).sum::<f32>() * 0.002;
@@ -231,7 +231,7 @@ fn on_click(
     voxels_per_meter: Res<voxel::VoxelsPerMeter>,
     mut state: ResMut<FloorBrushState>,
     mut last_used_colors: ResMut<LastUsedColors>,
-    mut pending_dynamic_updates: EventWriter<voxel::ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageWriter<voxel::ChunkPendingDynamicUpdate>,
 ) {
     let voxels_per_meter = *voxels_per_meter;
     match &mut *state {

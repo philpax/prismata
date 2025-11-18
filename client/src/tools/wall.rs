@@ -100,7 +100,7 @@ fn create_brush(
             Transform::default(),
             Visibility::Hidden,
             AlphaPulse::new(0.25, 1.0),
-            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
         ))
         .id();
@@ -116,7 +116,7 @@ fn destroy_brush(brush: Res<OurWallBrush>, mut commands: Commands) {
 
 fn update_brush_height(
     mut state: ResMut<WallBrushState>,
-    mut mouse_motion_events: EventReader<MouseMotion>,
+    mut mouse_motion_events: MessageReader<MouseMotion>,
 ) {
     if let WallBrushState::Ready { height, .. } = &mut *state {
         // TODO: consider going for motion in the direction of the extrusion, not just pure vertical movement
@@ -231,7 +231,7 @@ fn on_click(
     voxels_per_meter: Res<voxel::VoxelsPerMeter>,
     mut state: ResMut<WallBrushState>,
     mut last_used_colors: ResMut<LastUsedColors>,
-    mut pending_dynamic_updates: EventWriter<voxel::ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageWriter<voxel::ChunkPendingDynamicUpdate>,
 ) {
     let voxels_per_meter = *voxels_per_meter;
     match &mut *state {

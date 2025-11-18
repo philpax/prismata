@@ -2,14 +2,13 @@ use serde::{Deserialize, Serialize};
 use web_time::Duration;
 
 use bevy::{
-    camera::visibility::RenderLayers,
+    camera::{visibility::RenderLayers, Exposure},
     core_pipeline::{
         prepass::DepthPrepass,
         tonemapping::{DebandDither, Tonemapping},
     },
     prelude::*,
     render::{
-        camera::{CameraProjection, Exposure, RenderTarget},
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         extract_resource::{ExtractResource, ExtractResourcePlugin},
         render_resource::{
@@ -85,15 +84,10 @@ impl Plugin for PrismPlugin {
                 WritePlugin::new(ExportRenderedImageHandler),
                 WritePlugin::new(ExportRenderedDepthHandler),
             ))
-            .add_event::<PrismError>()
-            .add_event::<PrismRenderOutput>()
-            // TODO(Bevy 0.15): Move this to a component on the Prism camera once
-            // <https://github.com/bevyengine/bevy/pull/14273> is available on main.
-            //
-            // MSAA must be turned off to make the copy-to-buffer possible. This is
-            // only necessary for the Prism camera, so this being global is a temporary
-            // solution.
-            .insert_resource(Msaa::Off);
+            .add_message::<PrismError>()
+            .add_message::<PrismRenderOutput>();
+            // Note: MSAA is now per-camera (component, not resource).
+            // Prism cameras are spawned with Msaa::Off component directly.
     }
 
     fn finish(&self, app: &mut App) {
@@ -229,12 +223,12 @@ struct PrismPreviewMesh(Handle<Mesh>);
 #[derive(Resource)]
 struct PrismPreviewMaterial(Handle<StandardMaterial>);
 
-#[derive(Event)]
+#[derive(Message)]
 struct PrismError {
     message: String,
 }
 
-#[derive(Clone, Event)]
+#[derive(Clone, Message)]
 pub struct PrismRenderOutput {
     pub render_id: u64,
     pub diffuse: image::DynamicImage,
@@ -464,13 +458,14 @@ fn spawn_prism(
         Camera3d::default(),
         Camera {
             order: 2,
-            target: RenderTarget::Image(image_handle),
+            target: image_handle.into(),
             clear_color: ClearColorConfig::Custom(Color::srgba(1.0, 1.0, 1.0, 1.0)),
             ..default()
         },
         transform,
         RenderLayers::default(),
         DepthPrepass,
+        Msaa::Off, // Required for copy-to-buffer to work
         PrismMainCamera,
     ));
 
@@ -497,12 +492,13 @@ fn spawn_prism(
         Camera3d::default(),
         Camera {
             order: 3,
-            target: RenderTarget::Image(mask_image_handle),
+            target: mask_image_handle.into(),
             clear_color: ClearColorConfig::Custom(Color::BLACK),
             ..default()
         },
         transform,
-        RenderLayers::layer(rendering::MASK_CAMERA_ONLY_LAYER),
+        RenderLayers::layer(rendering::MASK_CAMERA_ONLY_LAYER as usize),
+        Msaa::Off, // Required for copy-to-buffer to work
         PrismMaskCamera,
     ));
 }
@@ -621,15 +617,15 @@ fn update_state_from_events(
     mut toasts: ResMut<Toasts>,
     mut active_tool: ResMut<ActiveTool>,
 
-    mut render_complete: EventReader<PrismRenderOutput>,
-    mut projection_completes: EventReader<ProjectionComplete>,
-    mut error: EventReader<PrismError>,
+    mut render_complete: MessageReader<PrismRenderOutput>,
+    mut projection_completes: MessageReader<ProjectionComplete>,
+    mut error: MessageReader<PrismError>,
 
     preview_mesh: Res<PrismPreviewMesh>,
     preview_material: Res<PrismPreviewMaterial>,
     mut commands: Commands,
 ) {
-    let ctx = contexts.ctx_mut();
+    let ctx = contexts.ctx_mut().unwrap();
 
     for error in error.read() {
         *prism_state = PrismState::Error {
@@ -678,7 +674,7 @@ fn update_state_from_events(
                     "prism_capture_mask",
                     egui::ColorImage::new(
                         [render_size.x as usize, render_size.y as usize],
-                        egui::Color32::TRANSPARENT,
+                        vec![egui::Color32::TRANSPARENT; (render_size.x * render_size.y) as usize],
                     ),
                     egui::TextureOptions::default(),
                 );
@@ -798,7 +794,7 @@ fn handle_render_complete_event(
     let (size_x, size_y) = (diffuse.width() as usize, diffuse.height() as usize);
     let mask_texture = ctx.load_texture(
         "prism_capture_mask",
-        egui::ColorImage::new([size_x, size_y], egui::Color32::TRANSPARENT),
+        egui::ColorImage::new([size_x, size_y], vec![egui::Color32::TRANSPARENT; size_x * size_y]),
         egui::TextureOptions::default(),
     );
 
@@ -839,13 +835,13 @@ fn ui(
     mut paint: ResMut<PrismPaintSettings>,
     global_transform_query: Query<&GlobalTransform>,
 
-    mut export_image_requests: EventWriter<ExportImage>,
-    mut export_depth_requests: EventWriter<ExportDepth>,
-    mut export_rendered_image_requests: EventWriter<ExportRenderedImage>,
-    mut export_rendered_depth_requests: EventWriter<ExportRenderedDepth>,
-    mut prism_render_output_requests: EventWriter<PrismRenderOutput>,
+    mut export_image_requests: MessageWriter<ExportImage>,
+    mut export_depth_requests: MessageWriter<ExportDepth>,
+    mut export_rendered_image_requests: MessageWriter<ExportRenderedImage>,
+    mut export_rendered_depth_requests: MessageWriter<ExportRenderedDepth>,
+    mut prism_render_output_requests: MessageWriter<PrismRenderOutput>,
 
-    projection_requests: EventWriter<ProjectionRequest>,
+    projection_requests: MessageWriter<ProjectionRequest>,
     http_endpoints: Option<Res<HttpEndpoints>>,
 
     mut commands: Commands,
@@ -870,7 +866,7 @@ fn ui(
     let preview_texture_id = contexts.image_id(&preview_image.0).unwrap();
     let mask_texture_id = contexts.image_id(&mask_image.0).unwrap();
 
-    let ctx = contexts.ctx_mut();
+    let ctx = contexts.ctx_mut().unwrap();
 
     let screen_size = ctx.screen_rect().size();
     let total_size = screen_size.min_elem();
@@ -969,7 +965,7 @@ fn ui(
                 let json = std::fs::read_to_string("prism_render.json").unwrap();
                 let render: SerializablePrismRenderOutput = serde_json::from_str(&json).unwrap();
                 *prism_state = PrismState::try_from(&render).unwrap();
-                prism_render_output_requests.send(PrismRenderOutput::try_from(render).unwrap());
+                prism_render_output_requests.write(PrismRenderOutput::try_from(render).unwrap());
             }
         }
         PrismState::Capture(_) => {
@@ -1007,7 +1003,7 @@ fn ui(
                             )))
                             .clicked()
                         {
-                            export_image_requests.send(ExportImage);
+                            export_image_requests.write(ExportImage);
                         }
                         if ui
                             .add(egui::Button::new(format!(
@@ -1015,7 +1011,7 @@ fn ui(
                             )))
                             .clicked()
                         {
-                            export_depth_requests.send(ExportDepth);
+                            export_depth_requests.write(ExportDepth);
                         }
                     });
 
@@ -1202,7 +1198,7 @@ fn ui(
                             )))
                             .clicked()
                         {
-                            export_rendered_image_requests.send(ExportRenderedImage);
+                            export_rendered_image_requests.write(ExportRenderedImage);
                         }
                         if ui
                             .add(egui::Button::new(format!(
@@ -1210,7 +1206,7 @@ fn ui(
                             )))
                             .clicked()
                         {
-                            export_rendered_depth_requests.send(ExportRenderedDepth);
+                            export_rendered_depth_requests.write(ExportRenderedDepth);
                         }
                     });
                     ui.horizontal(|ui| {
@@ -1377,9 +1373,9 @@ fn reimagine(
                 .unwrap(),
         )
         .on_response(
-            |trigger: Trigger<ReqwestResponseEvent>,
-             mut output: EventWriter<PrismRenderOutput>,
-             mut error: EventWriter<PrismError>| {
+            |trigger: On<ReqwestResponseEvent>,
+             mut output: MessageWriter<PrismRenderOutput>,
+             mut error: MessageWriter<PrismError>| {
                 let response = trigger.event();
                 let result =
                     response
@@ -1393,10 +1389,10 @@ fn reimagine(
 
                 match result {
                     Ok(r) => {
-                        output.send(r);
+                        output.write(r);
                     }
                     Err(e) => {
-                        error.send(PrismError {
+                        error.write(PrismError {
                             message: format!("{e:?}"),
                         });
                     }
@@ -1404,8 +1400,8 @@ fn reimagine(
             },
         )
         .on_error(
-            |trigger: Trigger<ReqwestErrorEvent>, mut errors: EventWriter<PrismError>| {
-                errors.send(PrismError {
+            |trigger: On<ReqwestErrorEvent>, mut errors: MessageWriter<PrismError>| {
+                errors.write(PrismError {
                     message: format!("{:?}", trigger.event().0),
                 });
             },
@@ -1415,17 +1411,17 @@ fn reimagine(
 }
 
 fn project(
-    mut projection_requests: EventWriter<ProjectionRequest>,
+    mut projection_requests: MessageWriter<ProjectionRequest>,
     rendered: &PrismStateRendered,
     global_transform: &GlobalTransform,
 ) -> Result<u64, image::ImageError> {
     let request = ProjectionRequest::from_rendered(rendered, global_transform);
     let request_id = request.request_id;
-    projection_requests.send(request);
+    projection_requests.write(request);
     Ok(request_id)
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct ExportImage;
 #[derive(Clone, Copy)]
 pub struct ExportImageHandler;
@@ -1457,7 +1453,7 @@ impl WriteHandler for ExportImageHandler {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct ExportDepth;
 #[derive(Clone, Copy)]
 pub struct ExportDepthHandler;
@@ -1489,7 +1485,7 @@ impl WriteHandler for ExportDepthHandler {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct ExportRenderedImage;
 #[derive(Clone, Copy)]
 pub struct ExportRenderedImageHandler;
@@ -1521,7 +1517,7 @@ impl WriteHandler for ExportRenderedImageHandler {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct ExportRenderedDepth;
 #[derive(Clone, Copy)]
 pub struct ExportRenderedDepthHandler;

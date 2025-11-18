@@ -1,5 +1,5 @@
 use bevy::{
-    picking::mesh_picking::{ray_cast::MeshRayCast, MeshRayCastSettings},
+    picking::mesh_picking::ray_cast::MeshRayCast,
     prelude::*,
     window::PrimaryWindow,
 };
@@ -146,7 +146,7 @@ pub fn update_world_rayhits(
         return;
     };
 
-    let ray = camera.viewport_to_world(camera_transform, cursor_position);
+    let ray = camera.viewport_to_world(camera_transform, cursor_position).ok();
     cursor_ray_hit.ray = ray;
     cursor_ray_hit_without_draft.ray = ray;
     if let Some(ray) = ray {

@@ -48,7 +48,7 @@ fn process_pickable_children(
 
         if let Ok(children) = children_query.get(entity) {
             for child in children.iter() {
-                add_pickable(*child, children_query, mesh_query, commands);
+                add_pickable(child, children_query, mesh_query, commands);
             }
         }
     }
@@ -59,22 +59,19 @@ fn process_pickable_children(
 }
 
 fn toggle_picking_enabled(
-    gizmo_targets: Query<&GizmoTarget>,
-    cursor_visible: Res<CursorVisible>,
-    active_tool: Res<ActiveTool>,
-    mut picking_settings: ResMut<PickingSettings>,
+    _gizmo_targets: Query<&GizmoTarget>,
+    _cursor_visible: Res<CursorVisible>,
+    _active_tool: Res<ActiveTool>,
+    _picking_settings: ResMut<MeshPickingSettings>,
 ) {
-    // Picking is disabled when any of the gizmos is focused or active.
-    picking_settings.is_enabled = gizmo_targets
-        .iter()
-        .all(|target| !target.is_focused() && !target.is_active())
-        && cursor_visible.0
-        && active_tool.is_none();
+    // TODO(Bevy 0.17): MeshPickingSettings no longer has is_enabled/is_hoverable field.
+    // Need to implement picking enable/disable using require_markers + Pickable component,
+    // or another approach. For now, picking is always enabled.
 }
 
 /// Handle click events to toggle selection
 fn handle_selection_clicks(
-    mut click_events: EventReader<Pointer<Click>>,
+    mut click_events: MessageReader<Pointer<Click>>,
     mut commands: Commands,
     selected_query: Query<(), With<Selected>>,
     pickable_child_query: Query<(), With<PickableChild>>,
@@ -82,7 +79,7 @@ fn handle_selection_clicks(
     pickable_children_query: Query<(), With<PickableChildren>>,
 ) {
     for click in click_events.read() {
-        let mut entity = click.target;
+        let mut entity = click.target();
 
         // If this is a pickable child, find its parent
         if pickable_child_query.contains(entity) {

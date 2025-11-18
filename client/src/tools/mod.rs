@@ -347,7 +347,7 @@ pub fn scroll_size_system<T: Resource>(
     Res<BrushSizeMinimum>,
     Res<BrushSizeMaximum>,
     ResMut<T>,
-    EventReader<MouseWheel>,
+    MessageReader<MouseWheel>,
 ) {
     const SCROLL_SENSITIVITY: f32 = 0.01;
     move |active_tool: Res<ActiveTool>,
@@ -355,7 +355,7 @@ pub fn scroll_size_system<T: Resource>(
           brush_size_minimum: Res<BrushSizeMinimum>,
           brush_size_maximum: Res<BrushSizeMaximum>,
           mut brush: ResMut<T>,
-          mut scroll_events: EventReader<MouseWheel>| {
+          mut scroll_events: MessageReader<MouseWheel>| {
         if !active_tool.is(tool) || !cursor_visible.0 {
             return;
         }

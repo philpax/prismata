@@ -3,14 +3,17 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
+use std::collections::HashSet;
+
 use bevy::{
     input::mouse::{MouseScrollUnit, MouseWheel},
     prelude::*,
-    utils::HashSet,
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 use bevy_egui::egui;
+use ecolor::Color32 as OldColor32;
 use egui_aesthetix::Aesthetix;
+use epaint::Vec2 as OldVec2;
 
 use crate::{
     camera,
@@ -53,11 +56,11 @@ pub fn plugin(app: &mut App) {
             PreUpdate,
             (
                 absorb_egui_inputs
-                    .after(bevy_egui::systems::process_input_system)
-                    .before(bevy_egui::EguiSet::BeginFrame),
+                    .after(bevy_egui::EguiPreUpdateSet::ProcessInput)
+                    .before(bevy_egui::EguiPreUpdateSet::BeginPass),
                 drop_egui_input_if_cursor_invisible
-                    .after(bevy_egui::EguiSet::ProcessInput)
-                    .before(bevy_egui::EguiSet::BeginFrame),
+                    .after(bevy_egui::EguiPreUpdateSet::ProcessInput)
+                    .before(bevy_egui::EguiPreUpdateSet::BeginPass),
             ),
         )
         .add_systems(
@@ -94,37 +97,37 @@ fn setup(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
         fn name(&self) -> &str {
             self.0.name()
         }
-        fn primary_accent_color_visuals(&self) -> egui::Color32 {
+        fn primary_accent_color_visuals(&self) -> OldColor32 {
             self.0.primary_accent_color_visuals()
         }
-        fn secondary_accent_color_visuals(&self) -> egui::Color32 {
+        fn secondary_accent_color_visuals(&self) -> OldColor32 {
             self.0.secondary_accent_color_visuals()
         }
-        fn bg_primary_color_visuals(&self) -> egui::Color32 {
+        fn bg_primary_color_visuals(&self) -> OldColor32 {
             self.0.bg_primary_color_visuals()
         }
-        fn bg_secondary_color_visuals(&self) -> egui::Color32 {
+        fn bg_secondary_color_visuals(&self) -> OldColor32 {
             self.0.bg_secondary_color_visuals()
         }
-        fn bg_triage_color_visuals(&self) -> egui::Color32 {
+        fn bg_triage_color_visuals(&self) -> OldColor32 {
             self.0.bg_triage_color_visuals()
         }
-        fn bg_auxiliary_color_visuals(&self) -> egui::Color32 {
+        fn bg_auxiliary_color_visuals(&self) -> OldColor32 {
             self.0.bg_auxiliary_color_visuals()
         }
-        fn bg_contrast_color_visuals(&self) -> egui::Color32 {
+        fn bg_contrast_color_visuals(&self) -> OldColor32 {
             self.0.bg_contrast_color_visuals()
         }
-        fn fg_primary_text_color_visuals(&self) -> Option<egui::Color32> {
+        fn fg_primary_text_color_visuals(&self) -> Option<OldColor32> {
             self.0.fg_primary_text_color_visuals()
         }
-        fn fg_success_text_color_visuals(&self) -> egui::Color32 {
+        fn fg_success_text_color_visuals(&self) -> OldColor32 {
             self.0.fg_success_text_color_visuals()
         }
-        fn fg_warn_text_color_visuals(&self) -> egui::Color32 {
+        fn fg_warn_text_color_visuals(&self) -> OldColor32 {
             self.0.fg_warn_text_color_visuals()
         }
-        fn fg_error_text_color_visuals(&self) -> egui::Color32 {
+        fn fg_error_text_color_visuals(&self) -> OldColor32 {
             self.0.fg_error_text_color_visuals()
         }
         fn dark_mode_visuals(&self) -> bool {
@@ -133,8 +136,8 @@ fn setup(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
         fn margin_style(&self) -> f32 {
             6.0
         }
-        fn button_padding(&self) -> egui::Vec2 {
-            egui::Vec2::new(6.0, 4.0)
+        fn button_padding(&self) -> OldVec2 {
+            OldVec2::new(6.0, 4.0)
         }
         fn item_spacing_style(&self) -> f32 {
             4.0
@@ -151,11 +154,11 @@ fn setup(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
     let mut style = AesthetixWithNormalSpacing(egui_aesthetix::themes::NordDark).custom_style();
     style.visuals.popup_shadow = original_visuals.popup_shadow;
     style.visuals.window_shadow = original_visuals.window_shadow;
-    contexts.ctx_mut().set_style(Arc::new(style));
+    contexts.ctx_mut().unwrap().set_style(Arc::new(style));
 
     let mut fonts = egui::FontDefinitions::default();
     egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
-    contexts.ctx_mut().set_fonts(fonts);
+    contexts.ctx_mut().unwrap().set_fonts(fonts);
 
     toasts
         .info("Welcome! Select a tool and left-click to create.")
@@ -165,7 +168,7 @@ fn setup(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
 fn ui_left_panel(mut contexts: bevy_egui::EguiContexts, active_tool: ResMut<tools::ActiveTool>) {
     egui::Area::new("Left".into())
         .anchor(egui::Align2::LEFT_CENTER, egui::Vec2::ZERO)
-        .show(contexts.ctx_mut(), |ui| {
+        .show(contexts.ctx_mut().unwrap(), |ui| {
             egui::Frame::window(ui.style()).show(ui, |ui| {
                 tools::ui_left_panel(ui, active_tool);
             });
@@ -186,10 +189,10 @@ fn ui_right_panel<'a>(
     last_used_colors: Res<tools::LastUsedColors>,
 
     voxels_per_meter: ResMut<voxel::VoxelsPerMeter>,
-    recreate_start_scene_writer: EventWriter<voxel::RecreateStartScene>,
+    recreate_start_scene_writer: MessageWriter<voxel::RecreateStartScene>,
     project_name: ResMut<ProjectName>,
-    request_save_writer: EventWriter<RequestSave>,
-    request_load_writer: EventWriter<RequestLoad>,
+    request_save_writer: MessageWriter<RequestSave>,
+    request_load_writer: MessageWriter<RequestLoad>,
     floor_color: ResMut<rendering::FloorColor>,
     sun_angle: ResMut<rendering::SunAngle>,
 
@@ -202,7 +205,7 @@ fn ui_right_panel<'a>(
     egui::Area::new("Right".into())
         .anchor(egui::Align2::RIGHT_CENTER, egui::Vec2::ZERO)
         .default_size(egui::vec2(320.0, 670.0))
-        .show(contexts.ctx_mut(), |ui| {
+        .show(contexts.ctx_mut().unwrap(), |ui| {
             egui::Frame::window(ui.style()).show(ui, |ui| {
                 egui_dock::DockArea::new(&mut right_panel_dock_state.0).show_inside(
                     ui,
@@ -248,10 +251,10 @@ struct RightPanelViewer<'w, 's, 'a> {
     last_used_colors: Res<'w, tools::LastUsedColors>,
 
     voxels_per_meter: ResMut<'w, voxel::VoxelsPerMeter>,
-    recreate_start_scene_writer: EventWriter<'w, voxel::RecreateStartScene>,
+    recreate_start_scene_writer: MessageWriter<'w, voxel::RecreateStartScene>,
     project_name: ResMut<'w, ProjectName>,
-    request_save_writer: EventWriter<'w, RequestSave>,
-    request_load_writer: EventWriter<'w, RequestLoad>,
+    request_save_writer: MessageWriter<'w, RequestSave>,
+    request_load_writer: MessageWriter<'w, RequestLoad>,
     floor_color: ResMut<'w, rendering::FloorColor>,
     sun_angle: ResMut<'w, rendering::SunAngle>,
 
@@ -355,10 +358,10 @@ impl RightPanelViewer<'_, '_, '_> {
         ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
             ui.horizontal(|ui| {
                 if ui.button("Save").clicked() {
-                    self.request_save_writer.send(RequestSave);
+                    self.request_save_writer.write(RequestSave);
                 }
                 if ui.button("Load").clicked() {
-                    self.request_load_writer.send(RequestLoad);
+                    self.request_load_writer.write(RequestLoad);
                 }
             });
 
@@ -377,7 +380,7 @@ impl RightPanelViewer<'_, '_, '_> {
                 }
                 if ui.button("Recreate Start Scene").clicked() {
                     self.recreate_start_scene_writer
-                        .send(voxel::RecreateStartScene);
+                        .write(voxel::RecreateStartScene);
                 }
             });
 
@@ -447,7 +450,7 @@ fn ui_top_left_panel(
     egui_context_query: &mut QueryState<&'static mut bevy_egui::EguiContext, With<PrimaryWindow>>,
 ) {
     let Some(mut egui_context) = egui_context_query
-        .get_single_mut(world)
+        .single_mut(world)
         .ok()
         .map(|ctx| ctx.into_inner().clone())
     else {
@@ -467,7 +470,7 @@ fn ui_top_right_panel(
     main_camera: Query<(&camera::CameraType, &camera::CameraController), With<camera::MainCamera>>,
     state: Res<State<AppState>>,
 ) {
-    let ctx = contexts.ctx_mut();
+    let ctx = contexts.ctx_mut().unwrap();
     egui::Area::new("TopRight".into())
         .anchor(egui::Align2::RIGHT_TOP, egui::Vec2::ZERO)
         .show(ctx, |ui| {
@@ -484,7 +487,7 @@ fn ui_top_right_panel(
 }
 
 fn ui_toasts(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) {
-    toasts.show(contexts.ctx_mut());
+    toasts.show(contexts.ctx_mut().unwrap());
 }
 
 fn ui_inspector(
@@ -492,7 +495,7 @@ fn ui_inspector(
     egui_context_query: &mut QueryState<&'static mut bevy_egui::EguiContext, With<PrimaryWindow>>,
 ) {
     let Some(mut egui_context) = egui_context_query
-        .get_single_mut(world)
+        .single_mut(world)
         .ok()
         .map(|ctx| ctx.into_inner().clone())
     else {
@@ -530,10 +533,10 @@ fn ui_inspector(
 fn absorb_egui_inputs(
     mut contexts: bevy_egui::EguiContexts,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
-    mut mouse_wheel: ResMut<Events<MouseWheel>>,
+    mut mouse_wheel: ResMut<Messages<MouseWheel>>,
     mut keyboard: ResMut<ButtonInput<KeyCode>>,
 ) {
-    let ctx = contexts.ctx_mut();
+    let ctx = contexts.ctx_mut().unwrap();
     if !(ctx.wants_pointer_input() || ctx.is_pointer_over_area()) {
         return;
     }

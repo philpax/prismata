@@ -9,17 +9,17 @@ use bevy::{
     prelude::*,
     render::{
         render_graph::{
-            NodeRunError, RenderGraphApp, RenderGraphContext, RenderLabel, ViewNode, ViewNodeRunner,
+            NodeRunError, RenderGraphContext, RenderLabel, ViewNode, ViewNodeRunner,
         },
         render_resource::{
-            Buffer, BufferDescriptor, BufferUsages, Extent3d, ImageCopyBuffer, ImageDataLayout,
-            Maintain, MapMode,
+            Buffer, BufferDescriptor, BufferUsages, Extent3d, MapMode,
         },
         renderer::{RenderContext, RenderDevice},
         view::{ViewDepthTexture, ViewTarget},
-        Render, RenderSet,
+        Render, RenderSystems,
     },
 };
+use wgpu::{TexelCopyBufferInfo, TexelCopyBufferLayout};
 
 use super::{
     PrismCapturePayload, PrismMainCamera, PrismMaskCamera, PrismPostProcessRender, PrismRenderSize,
@@ -50,7 +50,7 @@ pub fn plugin(render_app: &mut App) {
         )
         .add_systems(
             Render,
-            map_buffers.after(RenderSet::Render).run_if(
+            map_buffers.after(RenderSystems::Render).run_if(
                 resource_exists::<PrismBuffers>.and_then(resource_exists::<PrismPostProcessRender>),
             ),
         );
@@ -136,9 +136,9 @@ impl ViewNode for PrismMainPostProcessNode {
         let command_encoder = render_context.command_encoder();
         command_encoder.copy_texture_to_buffer(
             view_target.main_texture().as_image_copy(),
-            ImageCopyBuffer {
+            TexelCopyBufferInfo {
                 buffer: &buffers.render,
-                layout: ImageDataLayout {
+                layout: TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(render_size.x * std::mem::size_of::<[u8; 4]>() as u32),
                     rows_per_image: None,
@@ -152,9 +152,9 @@ impl ViewNode for PrismMainPostProcessNode {
         );
         command_encoder.copy_texture_to_buffer(
             view_depth_texture.texture.as_image_copy(),
-            ImageCopyBuffer {
+            TexelCopyBufferInfo {
                 buffer: &buffers.depth,
-                layout: ImageDataLayout {
+                layout: TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(render_size.x * std::mem::size_of::<f32>() as u32),
                     rows_per_image: None,
@@ -203,9 +203,9 @@ impl ViewNode for PrismMaskPostProcessNode {
         let command_encoder = render_context.command_encoder();
         command_encoder.copy_texture_to_buffer(
             view_target.main_texture().as_image_copy(),
-            ImageCopyBuffer {
+            TexelCopyBufferInfo {
                 buffer: &buffers.mask,
-                layout: ImageDataLayout {
+                layout: TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(render_size.x * std::mem::size_of::<[u8; 4]>() as u32),
                     rows_per_image: None,

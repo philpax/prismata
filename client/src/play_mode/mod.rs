@@ -37,7 +37,7 @@ fn ui_top_left(
     use bevy_egui::egui;
     egui::Area::new("PlayModeTopLeft".into())
         .anchor(egui::Align2::LEFT_TOP, egui::Vec2::ZERO)
-        .show(egui_contexts.ctx_mut(), |ui| {
+        .show(egui_contexts.ctx_mut().unwrap(), |ui| {
             egui::Frame::window(ui.style()).show(ui, |ui| {
                 ui.checkbox(
                     &mut store.config_mut::<PhysicsGizmos>().0.enabled,
@@ -67,7 +67,6 @@ fn remove_colliders_on_play_exit(
         commands.entity(entity).remove::<(
             ColliderConstructor,
             Collider,
-            ColliderParent,
             ColliderAabb,
             CollidingEntities,
             ColliderDensity,
@@ -95,7 +94,9 @@ fn spawn_cubes_on_click(
         0.5 + rand::random::<f32>() * 0.2,
     ));
 
-    let camera_transform = camera.single();
+    let Ok(camera_transform) = camera.single() else {
+        return;
+    };
 
     if left_click.pressed(MouseButton::Left) {
         let (_, rotation, translation) = camera_transform.to_scale_rotation_translation();

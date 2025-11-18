@@ -1,6 +1,8 @@
 use bevy::{
+    asset::RenderAssetUsages,
+    mesh::{Indices, PrimitiveTopology},
     prelude::*,
-    render::{mesh::Indices, render_asset::RenderAssetUsages, render_resource::*},
+    render::render_resource::*,
 };
 
 use crate::{

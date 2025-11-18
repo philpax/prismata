@@ -20,8 +20,10 @@ clap = { version = "4.5.18", features = ["derive"] }
 crossbeam-channel = "0.5.13"
 data-encoding = "2.6"
 doc_consts = "0.2"
+ecolor = "0.28.1"  # Old version for egui-aesthetix compatibility
 egui-aesthetix = { version = "0.2.4", features = ["nord"] }
 egui_dock = "0.15"
+epaint = "0.28.1"  # Old version for egui-aesthetix compatibility
 egui-notify = "0.17"
 egui-phosphor = "0.7"
 egui_plot = "0.33"
@@ -48,6 +50,7 @@ tracing-subscriber = "0.3"
 transform-gizmo-bevy = { git = "https://github.com/pindash-io/transform-gizmo.git", branch = "bevy-0.17" }
 wasm-bindgen-futures = "0.4"
 web-time = "1.1.0"
+wgpu = "26.0"
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
 
 [profile.dev]

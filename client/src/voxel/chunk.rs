@@ -12,15 +12,13 @@ use std::{
 
 use avian3d::prelude::*;
 use bevy::{
-    asset::embedded_asset,
+    asset::{embedded_asset, RenderAssetUsages},
     camera::visibility::RenderLayers,
+    mesh::{Indices, PrimitiveTopology},
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
-    render::{
-        mesh::{Indices, PrimitiveTopology},
-        render_asset::RenderAssetUsages,
-        render_resource::{AsBindGroup, ShaderRef},
-    },
+    render::render_resource::AsBindGroup,
+    shader::ShaderRef,
 };
 use bevy_egui::{egui, EguiContexts};
 
@@ -41,7 +39,7 @@ pub fn plugin(app: &mut App) {
         .add_plugins(MaterialPlugin::<
             ExtendedMaterial<StandardMaterial, MatteMaterialExtension>,
         >::default())
-        .add_event::<ChunkPendingDynamicUpdate>()
+        .add_message::<ChunkPendingDynamicUpdate>()
         .add_systems(Startup, setup)
         .add_systems(PreUpdate, build_chunk_map)
         .add_systems(
@@ -191,7 +189,7 @@ impl ChunkLastUpdated {
 #[allow(clippy::type_complexity)]
 pub type ChunkDynamicUpdate = Arc<dyn Fn(&mut ChunkData, ChunkCoords) -> bool + Send + Sync>;
 
-#[derive(Event)]
+#[derive(Message)]
 /// When sent, the associated chunk will be updated with the given function.
 /// If the chunk does not exist, it will be created before the update is applied.
 pub struct ChunkPendingDynamicUpdate {
@@ -265,7 +263,7 @@ fn build_chunk_map(mut chunks: ResMut<Chunks>, chunk_data: Query<(&ChunkCoords, 
 }
 
 fn ensure_chunks_exist_for_updates(
-    mut pending_dynamic_updates: EventReader<ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageReader<ChunkPendingDynamicUpdate>,
     mut all_chunks: ResMut<Chunks>,
     chunk_size_meters: Res<ChunkSizeMeters>,
     mut chunks: Query<&mut ChunkLastUpdated>,
@@ -295,7 +293,7 @@ fn ensure_chunks_exist_for_updates(
 }
 
 fn extract_updates_into_chunks(
-    mut pending_dynamic_updates: EventReader<ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageReader<ChunkPendingDynamicUpdate>,
     mut chunks: Query<&mut ChunkPendingDynamicUpdates>,
     all_chunks: Res<Chunks>,
 ) {
@@ -515,7 +513,7 @@ fn rebuild_updated_chunks(
                     Mesh3d(handle),
                     MeshMaterial3d(chunk_mask_material.clone()),
                     Transform::default(),
-                    RenderLayers::layer(MASK_CAMERA_ONLY_LAYER),
+                    RenderLayers::layer(MASK_CAMERA_ONLY_LAYER as usize),
                 ));
             });
     }
@@ -727,7 +725,7 @@ fn visualize_chunks(
         return;
     };
 
-    let egui_context = egui_contexts.ctx_mut();
+    let egui_context = egui_contexts.ctx_mut().unwrap();
     let font = egui::TextStyle::Monospace.resolve(&egui_context.style());
 
     for (transform, coords, has_draft_voxels) in chunks.iter() {

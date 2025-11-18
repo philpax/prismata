@@ -1,15 +1,15 @@
 use super::*;
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct RecreateStartScene;
 
 pub fn plugin(app: &mut App) {
-    app.add_event::<RecreateStartScene>()
+    app.add_message::<RecreateStartScene>()
         .add_systems(Update, recreate_start_scene_on_event);
 }
 
 fn create_start_scene(
-    mut pending_dynamic_updates: EventWriter<ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageWriter<ChunkPendingDynamicUpdate>,
     voxels_per_meter: Res<VoxelsPerMeter>,
 ) {
     let pending_dynamic_updates = &mut pending_dynamic_updates;
@@ -25,8 +25,8 @@ fn create_start_scene(
 }
 
 fn recreate_start_scene_on_event(
-    mut recreate_start_scene_events: EventReader<RecreateStartScene>,
-    pending_dynamic_updates: EventWriter<ChunkPendingDynamicUpdate>,
+    mut recreate_start_scene_events: MessageReader<RecreateStartScene>,
+    pending_dynamic_updates: MessageWriter<ChunkPendingDynamicUpdate>,
     voxels_per_meter: Res<VoxelsPerMeter>,
 ) {
     if recreate_start_scene_events.read().count() > 0 {
@@ -35,7 +35,7 @@ fn recreate_start_scene_on_event(
 }
 
 fn original_sphere(
-    pending_dynamic_updates: &mut EventWriter<ChunkPendingDynamicUpdate>,
+    pending_dynamic_updates: &mut MessageWriter<ChunkPendingDynamicUpdate>,
     voxels_per_meter: VoxelsPerMeter,
 ) {
     update(
@@ -61,7 +61,7 @@ fn original_sphere(
 }
 
 fn perlinlike_noise_sphere(
-    pending_dynamic_updates: &mut EventWriter<ChunkPendingDynamicUpdate>,
+    pending_dynamic_updates: &mut MessageWriter<ChunkPendingDynamicUpdate>,
     voxels_per_meter: VoxelsPerMeter,
 ) {
     update(
@@ -95,7 +95,7 @@ fn perlinlike_noise_sphere(
 }
 
 fn torus(
-    pending_dynamic_updates: &mut EventWriter<ChunkPendingDynamicUpdate>,
+    pending_dynamic_updates: &mut MessageWriter<ChunkPendingDynamicUpdate>,
     voxels_per_meter: VoxelsPerMeter,
 ) {
     update(
@@ -127,7 +127,7 @@ fn torus(
 }
 
 fn fractal_terrain(
-    pending_dynamic_updates: &mut EventWriter<ChunkPendingDynamicUpdate>,
+    pending_dynamic_updates: &mut MessageWriter<ChunkPendingDynamicUpdate>,
     voxels_per_meter: VoxelsPerMeter,
 ) {
     update(
@@ -161,7 +161,7 @@ fn fractal_terrain(
 }
 
 fn spiral_staircase(
-    pending_dynamic_updates: &mut EventWriter<ChunkPendingDynamicUpdate>,
+    pending_dynamic_updates: &mut MessageWriter<ChunkPendingDynamicUpdate>,
     voxels_per_meter: VoxelsPerMeter,
 ) {
     update(

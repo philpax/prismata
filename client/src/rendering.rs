@@ -95,14 +95,14 @@ pub fn plugin(app: &mut App) {
     app.insert_gizmo_config(
         MainCameraGizmos::default(),
         GizmoConfig {
-            render_layers: RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            render_layers: RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             ..default()
         },
     )
     .insert_gizmo_config(
         MainCameraGizmosWithoutDepth::default(),
         GizmoConfig {
-            render_layers: RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            render_layers: RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             depth_bias: -1.0,
             ..default()
         },

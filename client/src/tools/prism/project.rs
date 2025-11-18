@@ -6,12 +6,12 @@ use crate::voxel::{self, ChunkPendingChunkSpheres};
 use super::{PrismRenderDepthOutput, PrismStateRendered};
 
 pub fn plugin(app: &mut App) {
-    app.add_event::<ProjectionRequest>()
-        .add_event::<ProjectionComplete>()
+    app.add_message::<ProjectionRequest>()
+        .add_message::<ProjectionComplete>()
         .add_systems(Update, process_incoming_project_requests);
 }
 
-#[derive(Clone, Event)]
+#[derive(Clone, Message)]
 pub struct ProjectionRequest {
     pub request_id: u64,
     pub render: image::DynamicImage,
@@ -98,7 +98,7 @@ impl ProjectionRequest {
     }
 }
 
-#[derive(Clone, Event)]
+#[derive(Clone, Message)]
 pub struct ProjectionComplete {
     pub request_id: u64,
 }
@@ -107,8 +107,8 @@ fn process_incoming_project_requests(
     mut chunks: ResMut<voxel::Chunks>,
     mut pending_chunk_spheres: Query<&mut ChunkPendingChunkSpheres>,
     mut commands: Commands,
-    mut projection_complete: EventWriter<ProjectionComplete>,
-    mut requests: EventReader<ProjectionRequest>,
+    mut projection_complete: MessageWriter<ProjectionComplete>,
+    mut requests: MessageReader<ProjectionRequest>,
     voxels_per_meter: Res<voxel::VoxelsPerMeter>,
     voxel_size_meters: Res<voxel::VoxelSizeMeters>,
 ) {
@@ -125,7 +125,7 @@ fn process_incoming_project_requests(
             &splats,
         );
 
-        projection_complete.send(ProjectionComplete {
+        projection_complete.write(ProjectionComplete {
             request_id: request.request_id,
         });
     }

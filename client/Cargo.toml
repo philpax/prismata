@@ -44,8 +44,10 @@ bytemuck = { workspace = true }
 crossbeam-channel = { workspace = true }
 data-encoding = { workspace = true }
 doc_consts = { workspace = true }
+ecolor = { workspace = true }
 egui-aesthetix = { workspace = true }
 egui_dock = { workspace = true }
+epaint = { workspace = true }
 egui-notify = { workspace = true }
 egui-phosphor = { workspace = true }
 egui_plot = { workspace = true }
@@ -61,6 +63,7 @@ toml = { workspace = true }
 transform-gizmo-bevy = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 web-time = { workspace = true }
+wgpu = { workspace = true }
 zip = { workspace = true }
 
 # Only include Tokio in native builds; it's only used for listen servers

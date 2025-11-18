@@ -57,7 +57,7 @@ fn create_brush(
             Transform::default(),
             Visibility::Hidden,
             AlphaPulse::new(0.25, 1.0),
-            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
         ))
         .id();
@@ -96,7 +96,7 @@ fn on_use(
     tool_color: Res<ToolColor>,
     voxels_per_meter: Res<voxel::VoxelsPerMeter>,
     mut last_used_colors: ResMut<LastUsedColors>,
-    mut pending_dynamic_updates: EventWriter<voxel::ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageWriter<voxel::ChunkPendingDynamicUpdate>,
 ) {
     let Some(center) = cursor_ray_hit_without_draft.coords() else {
         return;

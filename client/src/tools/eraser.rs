@@ -59,7 +59,7 @@ fn create_brush(
             Transform::default(),
             Visibility::Hidden,
             AlphaPulse::new(0.25, 0.5),
-            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
         ))
         .id();
@@ -95,7 +95,7 @@ fn on_use(
     cursor_ray_hit: Res<CursorRayHit>,
     settings: Res<OurEraserBrushSettings>,
     voxels_per_meter: Res<voxel::VoxelsPerMeter>,
-    mut pending_dynamic_updates: EventWriter<voxel::ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageWriter<voxel::ChunkPendingDynamicUpdate>,
 ) {
     let Some(center) = cursor_ray_hit.coords() else {
         return;
