@@ -1,0 +1,91 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'client/**'
+      - 'protocol/**'
+      - 'server_lib/**'
+      - 'assets/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'scripts/client_web_build.sh'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Frontend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: source
+
+      - name: Install wasm-bindgen-cli
+        run: |
+          if ! command -v wasm-bindgen &> /dev/null; then
+            cargo install wasm-bindgen-cli
+          fi
+
+      - name: Install wasm-opt
+        run: |
+          if ! command -v wasm-opt &> /dev/null; then
+            # Install binaryen for wasm-opt
+            wget https://github.com/WebAssembly/binaryen/releases/download/version_119/binaryen-version_119-x86_64-linux.tar.gz
+            tar -xzf binaryen-version_119-x86_64-linux.tar.gz
+            sudo cp binaryen-version_119/bin/wasm-opt /usr/local/bin/
+          fi
+
+      - name: Build WASM frontend
+        working-directory: source
+        run: |
+          chmod +x scripts/client_web_build.sh
+          ./scripts/client_web_build.sh
+
+      - name: Checkout GitHub Pages repository
+        uses: actions/checkout@v4
+        with:
+          repository: philpax/philpax.github.io
+          path: pages
+          token: ${{ secrets.PAGES_DEPLOY_TOKEN }}
+
+      - name: Deploy to GitHub Pages
+        working-directory: pages
+        run: |
+          mkdir -p static/experimental/prismata
+          rm -rf static/experimental/prismata/*
+          cp -r ../source/build/* static/experimental/prismata/
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add static/experimental/prismata
+          if git diff --staged --quiet; then
+            echo "No changes to deploy"
+          else
+            git commit -m "Deploy Prismata frontend
+
+            Automated deployment from philpax/prismata@${{ github.sha }}"
+            git push
+          fi
+
+      - name: Deployment complete
+        run: |
+          echo "✓ Frontend deployed successfully!"
+          echo "🌐 Available at: https://philpax.me/experimental/prismata/"
