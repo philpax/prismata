@@ -1,4 +1,7 @@
-use std::{fmt, sync::{Arc, LazyLock}};
+use std::{
+    fmt,
+    sync::{Arc, LazyLock},
+};
 
 use std::collections::HashSet;
 
@@ -7,7 +10,7 @@ use bevy::{
     prelude::*,
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
-use bevy_egui::egui;
+use bevy_egui::{egui, EguiPrimaryContextPass};
 use ecolor::Color32 as OldColor32;
 use egui_aesthetix::Aesthetix;
 use epaint::Vec2 as OldVec2;
@@ -61,7 +64,7 @@ pub fn plugin(app: &mut App) {
             ),
         )
         .add_systems(
-            Update,
+            EguiPrimaryContextPass,
             (
                 (
                     cursor_grab,
@@ -75,8 +78,7 @@ pub fn plugin(app: &mut App) {
                     ui_top_right_panel,
                     ui_toasts,
                     ui_inspector,
-                )
-                    .after(bevy_egui::EguiPreUpdateSet::BeginPass),
+                ),
             ),
         );
 }
@@ -398,7 +400,13 @@ impl RightPanelViewer<'_, '_, '_> {
             } else {
                 egui::Stroke::NONE
             };
-            ui.painter().rect(rect, rounding, egui_color, stroke, egui::StrokeKind::Outside);
+            ui.painter().rect(
+                rect,
+                rounding,
+                egui_color,
+                stroke,
+                egui::StrokeKind::Outside,
+            );
             if response.clicked() {
                 *tool_color_base = color;
             }
@@ -635,7 +643,11 @@ fn drop_egui_input_if_cursor_invisible(
     }
 }
 
-fn set_cursor_visible(cursor_visible: &mut CursorVisible, cursor_options: &mut CursorOptions, visible: bool) {
+fn set_cursor_visible(
+    cursor_visible: &mut CursorVisible,
+    cursor_options: &mut CursorOptions,
+    visible: bool,
+) {
     cursor_options.grab_mode = if visible {
         CursorGrabMode::None
     } else {

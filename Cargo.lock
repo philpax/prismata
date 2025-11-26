@@ -619,7 +619,7 @@ dependencies = [
  "bevy_color",
  "bevy_core_pipeline",
  "bevy_ecs",
- "bevy_egui",
+ "bevy_egui 0.38.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bevy_image",
  "bevy_light",
  "bevy_log",
@@ -991,6 +991,52 @@ name = "bevy_egui"
 version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c20416343c6d24eedad9db93c4c42c6571b15d14bac4f6f41b993ec413243f9"
+dependencies = [
+ "arboard",
+ "bevy_app",
+ "bevy_asset",
+ "bevy_camera",
+ "bevy_color",
+ "bevy_core_pipeline",
+ "bevy_derive",
+ "bevy_ecs",
+ "bevy_image",
+ "bevy_input",
+ "bevy_log",
+ "bevy_math",
+ "bevy_mesh",
+ "bevy_picking",
+ "bevy_platform",
+ "bevy_reflect",
+ "bevy_render",
+ "bevy_shader",
+ "bevy_time",
+ "bevy_transform",
+ "bevy_ui_render",
+ "bevy_utils",
+ "bevy_window",
+ "bevy_winit",
+ "bytemuck",
+ "crossbeam-channel",
+ "egui 0.33.2",
+ "encase",
+ "getrandom 0.3.4",
+ "image",
+ "itertools 0.14.0",
+ "js-sys",
+ "thread_local",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "webbrowser",
+ "wgpu-types",
+ "winit",
+]
+
+[[package]]
+name = "bevy_egui"
+version = "0.38.0"
+source = "git+https://github.com/mvlabat/bevy_egui#74fd9d937cac628a67dba711c8d1489030cf1dae"
 dependencies = [
  "arboard",
  "bevy_app",
@@ -5023,7 +5069,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_async_task",
- "bevy_egui",
+ "bevy_egui 0.38.0 (git+https://github.com/mvlabat/bevy_egui)",
  "bevy_embedded_assets",
  "bevy_mod_reqwest",
  "bevy_transform",

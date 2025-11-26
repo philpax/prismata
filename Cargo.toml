@@ -8,7 +8,7 @@ avian3d = "0.4"
 axum = "0.7"
 bevy = { version = "0.17.2", default-features = false }
 bevy_async_task = "0.9"
-bevy_egui = "0.38"
+bevy_egui = { git = "https://github.com/mvlabat/bevy_egui" }
 bevy_embedded_assets = "0.14"
 bevy-inspector-egui = "0.35.0"
 # bevy_mod_picking = "0.20" # Removed: upstreamed to Bevy since 0.15
@@ -21,7 +21,9 @@ crossbeam-channel = "0.5.13"
 data-encoding = "2.6"
 doc_consts = "0.2"
 ecolor = "0.33"
-egui-aesthetix = { git = "https://github.com/thebashpotato/egui-aesthetix", branch = "dependabot/cargo/egui-0.33", features = ["nord"] }
+egui-aesthetix = { git = "https://github.com/thebashpotato/egui-aesthetix", branch = "dependabot/cargo/egui-0.33", features = [
+    "nord",
+] }
 egui_dock = "0.18"
 egui-notify = "0.21.0"
 egui-phosphor = { git = "https://github.com/amPerl/egui-phosphor" }
