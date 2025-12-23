@@ -41,8 +41,8 @@ impl std::fmt::Display for CameraType {
 #[derive(Component)]
 pub struct CameraController {
     pub position: Vec3,
-    pub yaw: f32,   // radians
-    pub pitch: f32, // radians
+    pub yaw: f32,     // radians
+    pub pitch: f32,   // radians
     pub target: Vec3, // For orbit camera
 }
 
@@ -110,8 +110,10 @@ fn setup(mut commands: Commands) {
     // Camera
     let target = Vec3::new(0., 0.45, 0.);
     let transform = Transform::from_xyz(-0.45, 0.45, -0.45).looking_at(target, Vec3::Y);
-    let render_layers =
-        RenderLayers::from_layers(&[ALL_NON_MASK_CAMERA_LAYER as usize, MAIN_CAMERA_ONLY_LAYER as usize]);
+    let render_layers = RenderLayers::from_layers(&[
+        ALL_NON_MASK_CAMERA_LAYER as usize,
+        MAIN_CAMERA_ONLY_LAYER as usize,
+    ]);
 
     commands.spawn((
         MainCamera,
@@ -172,7 +174,7 @@ fn swap_camera(
     if !keys.just_pressed(KeyCode::KeyT) {
         return;
     }
-    let Ok((e_main, mut cam_main, transform_main, controller_main)) = q_main.single_mut() else {
+    let Ok((e_main, mut cam_main, transform_main, _controller_main)) = q_main.single_mut() else {
         return;
     };
     let Ok((e_sec, mut cam_sec, type_sec, mut controller_sec)) = q_sec.single_mut() else {
@@ -296,7 +298,9 @@ pub fn update_camera(
             // Update yaw and pitch from mouse delta
             controller.yaw -= delta.x.to_radians() * 0.5;
             controller.pitch -= delta.y.to_radians() * 0.5;
-            controller.pitch = controller.pitch.clamp(-89.9f32.to_radians(), 89.9f32.to_radians());
+            controller.pitch = controller
+                .pitch
+                .clamp(-89.9f32.to_radians(), 89.9f32.to_radians());
 
             // Calculate movement in camera space
             let rotation = Quat::from_euler(EulerRot::YXZ, controller.yaw, controller.pitch, 0.0);
@@ -338,20 +342,14 @@ pub fn update_camera(
 }
 
 /// System that applies camera controller state to the actual Transform
-fn apply_camera_controller(
-    mut cameras: Query<(&CameraType, &CameraController, &mut Transform)>,
-) {
+fn apply_camera_controller(mut cameras: Query<(&CameraType, &CameraController, &mut Transform)>) {
     for (camera_type, controller, mut transform) in &mut cameras {
         transform.translation = controller.position;
 
         match camera_type {
             CameraType::Free => {
-                transform.rotation = Quat::from_euler(
-                    EulerRot::YXZ,
-                    controller.yaw,
-                    controller.pitch,
-                    0.0
-                );
+                transform.rotation =
+                    Quat::from_euler(EulerRot::YXZ, controller.yaw, controller.pitch, 0.0);
             }
             CameraType::Orbit => {
                 transform.look_at(controller.target, Vec3::Y);

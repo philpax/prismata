@@ -1,8 +1,4 @@
-use bevy::{
-    picking::mesh_picking::ray_cast::MeshRayCast,
-    prelude::*,
-    window::PrimaryWindow,
-};
+use bevy::{picking::mesh_picking::ray_cast::MeshRayCast, prelude::*, window::PrimaryWindow};
 
 use crate::{
     camera::MainCamera,
@@ -74,7 +70,9 @@ pub fn raycast(
         dist_a.partial_cmp(&dist_b).unwrap()
     });
 
-    let world_raycast_distance = world_raycast.first().map(|r| r.1.point.distance(ray.origin));
+    let world_raycast_distance = world_raycast
+        .first()
+        .map(|r| r.1.point.distance(ray.origin));
 
     fn world_raycast_to_hit(
         hits: &[(Entity, bevy::picking::mesh_picking::ray_cast::RayMeshHit)],
@@ -147,7 +145,9 @@ pub fn update_world_rayhits(
         return;
     };
 
-    let ray = camera.viewport_to_world(camera_transform, cursor_position).ok();
+    let ray = camera
+        .viewport_to_world(camera_transform, cursor_position)
+        .ok();
     cursor_ray_hit.ray = ray;
     cursor_ray_hit_without_draft.ray = ray;
     if let Some(ray) = ray {

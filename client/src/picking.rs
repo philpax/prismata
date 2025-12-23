@@ -84,11 +84,9 @@ fn handle_selection_clicks(
 
         // If this is a pickable child, find its parent
         if pickable_child_query.contains(entity) {
-            if let Some(parent) = util::find_parent_with_component(
-                &parent_query,
-                &pickable_children_query,
-                entity,
-            ) {
+            if let Some(parent) =
+                util::find_parent_with_component(&parent_query, &pickable_children_query, entity)
+            {
                 entity = parent;
             }
         }

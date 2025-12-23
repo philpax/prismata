@@ -1,11 +1,7 @@
 use std::f32::consts::TAU;
 
 use avian3d::prelude::{ColliderConstructor, RigidBody};
-use bevy::{
-    camera::visibility::RenderLayers,
-    color::palettes::css::SILVER,
-    prelude::*,
-};
+use bevy::{camera::visibility::RenderLayers, color::palettes::css::SILVER, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use crate::{play_mode::PreserveColliderOnPlayExit, raycast::RaycastIgnore};
@@ -144,12 +140,14 @@ fn setup(
     let base_color = Color::from(SILVER);
     commands.spawn((
         Floor,
-        Mesh3d(meshes.add(
-            Plane3d::default()
-                .mesh()
-                .size(PLANE_SIZE, PLANE_SIZE)
-                .subdivisions(1),
-        )),
+        Mesh3d(
+            meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(PLANE_SIZE, PLANE_SIZE)
+                    .subdivisions(1),
+            ),
+        ),
         MeshMaterial3d(materials.add(base_color)),
         Transform::default(),
         RaycastIgnore,

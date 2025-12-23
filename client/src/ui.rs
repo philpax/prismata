@@ -185,14 +185,14 @@ fn ui_left_panel(mut contexts: bevy_egui::EguiContexts, active_tool: ResMut<tool
 }
 
 #[derive(Resource)]
-struct RightPanelDockState(egui_dock::DockState<RightPanelTab>);
+struct RightPanelDockState(#[allow(dead_code)] egui_dock::DockState<RightPanelTab>);
 impl Default for RightPanelDockState {
     fn default() -> Self {
         Self(egui_dock::DockState::new(RightPanelTab::ALL.to_vec()))
     }
 }
 fn ui_right_panel<'a>(
-    right_panel_dock_state: ResMut<RightPanelDockState>,
+    _right_panel_dock_state: ResMut<RightPanelDockState>,
     mut contexts: bevy_egui::EguiContexts,
     tool_color: ResMut<tools::ToolColor>,
     last_used_colors: Res<tools::LastUsedColors>,
@@ -394,7 +394,7 @@ impl RightPanelViewer<'_, '_, '_> {
             const COLOR_SIZE: f32 = 12.;
             let (rect, response) =
                 ui.allocate_at_least(egui::Vec2::splat(COLOR_SIZE), egui::Sense::click());
-            let rounding = egui::Rounding::ZERO;
+            let rounding = egui::CornerRadius::ZERO;
             let stroke = if response.hovered() {
                 egui::Stroke::new(1.0, egui::Color32::WHITE)
             } else {
@@ -580,7 +580,7 @@ fn ui_inspector(
                 // TODO: bevy_inspector_egui version mismatch with egui - fix when versions align
                 // bevy_inspector_egui::bevy_inspector::ui_for_world(world, ui);
 
-                egui::CollapsingHeader::new("Materials").show(ui, |ui| {
+                egui::CollapsingHeader::new("Materials").show(ui, |_ui| {
                     // TODO: bevy_inspector_egui version mismatch with egui - fix when versions align
                     // bevy_inspector_egui::bevy_inspector::ui_for_assets::<StandardMaterial>(
                     //     world, ui,

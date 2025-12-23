@@ -47,12 +47,14 @@ fn create_brush(
     let id = commands
         .spawn((
             Name::new("Cube Brush"),
-            Mesh3d(meshes.add(
-                Cuboid {
-                    half_size: Vec3::splat(1.0),
-                }
-                .mesh(),
-            )),
+            Mesh3d(
+                meshes.add(
+                    Cuboid {
+                        half_size: Vec3::splat(1.0),
+                    }
+                    .mesh(),
+                ),
+            ),
             MeshMaterial3d(materials.add(StandardMaterial {
                 alpha_mode: AlphaMode::Blend,
                 base_color: Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
@@ -82,7 +84,11 @@ fn update_brush_viz(
     our_cube_brush: Res<OurCubeBrush>,
     settings: Res<OurCubeBrushSettings>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tool_brushes: Query<(&mut Transform, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
+    mut tool_brushes: Query<(
+        &mut Transform,
+        &mut Visibility,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
 ) {
     let (mut transform, mut visibility, color) = tool_brushes.get_mut(our_cube_brush.0).unwrap();
     if let Some(voxel) = voxel_under_cursor.ray_hit.filter(|_| cursor_visible.0) {

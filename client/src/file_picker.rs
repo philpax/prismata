@@ -42,8 +42,7 @@ mod read {
     }
     fn build_load_system<R: ReadHandler>(
         handler: R,
-    ) -> impl Fn(&mut World, TaskRunner<Option<SendableFileHandle>>, TaskRunner<Vec<u8>>)
-    {
+    ) -> impl Fn(&mut World, TaskRunner<Option<SendableFileHandle>>, TaskRunner<Vec<u8>>) {
         move |world: &mut World,
               mut file_dialog_executor: TaskRunner<Option<SendableFileHandle>>,
               mut read_executor: TaskRunner<Vec<u8>>| {
@@ -114,11 +113,8 @@ mod write {
     }
     fn build_save_system<W: WriteHandler>(
         handler: W,
-    ) -> impl Fn(
-        &mut World,
-        TaskRunner<Option<SendableFileHandle>>,
-        TaskRunner<std::io::Result<()>>,
-    ) {
+    ) -> impl Fn(&mut World, TaskRunner<Option<SendableFileHandle>>, TaskRunner<std::io::Result<()>>)
+    {
         move |world: &mut World,
               mut file_dialog_executor: TaskRunner<Option<SendableFileHandle>>,
               mut write_executor: TaskRunner<std::io::Result<()>>| {

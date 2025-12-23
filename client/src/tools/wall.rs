@@ -46,12 +46,10 @@ pub fn plugin(app: &mut App) {
                 destroy_brush.run_if(brush_should_be_destroyed::<OurWallBrush>(Tool::Wall)),
                 update_brush_height
                     .run_if(resource_exists::<WallBrushState>.and(is_cursor_visible)),
-                update_brush_viz.run_if(
-                    resource_exists::<OurWallBrush>.and(resource_exists::<WallBrushState>),
-                ),
-                on_click.run_if(
-                    stopped_being_used(Tool::Wall).and(resource_exists::<WallBrushState>),
-                ),
+                update_brush_viz
+                    .run_if(resource_exists::<OurWallBrush>.and(resource_exists::<WallBrushState>)),
+                on_click
+                    .run_if(stopped_being_used(Tool::Wall).and(resource_exists::<WallBrushState>)),
             )
                 .chain()
                 .after(update_world_rayhits),
@@ -85,12 +83,14 @@ fn create_brush(
     let id = commands
         .spawn((
             Name::new("Wall Brush"),
-            Mesh3d(meshes.add(
-                Cuboid {
-                    half_size: Vec3::splat(0.5),
-                }
-                .mesh(),
-            )),
+            Mesh3d(
+                meshes.add(
+                    Cuboid {
+                        half_size: Vec3::splat(0.5),
+                    }
+                    .mesh(),
+                ),
+            ),
             MeshMaterial3d(materials.add(StandardMaterial {
                 alpha_mode: AlphaMode::Blend,
                 base_color: Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
@@ -135,7 +135,11 @@ fn update_brush_viz(
 
     mut gizmos: Gizmos<MainCameraGizmosWithoutDepth>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tool_brushes: Query<(&mut Transform, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
+    mut tool_brushes: Query<(
+        &mut Transform,
+        &mut Visibility,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
 ) {
     let (mut transform, mut visibility, color) = tool_brushes.get_mut(our_wall_brush.0).unwrap();
 

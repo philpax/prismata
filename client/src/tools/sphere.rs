@@ -77,7 +77,11 @@ fn update_brush_viz(
     our_sphere_brush: Res<OurSphereBrush>,
     settings: Res<OurSphereBrushSettings>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tool_brushes: Query<(&mut Transform, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
+    mut tool_brushes: Query<(
+        &mut Transform,
+        &mut Visibility,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
 ) {
     let (mut transform, mut visibility, color) = tool_brushes.get_mut(our_sphere_brush.0).unwrap();
     if let Some(voxel) = voxel_under_cursor.ray_hit.filter(|_| cursor_visible.0) {

@@ -84,7 +84,7 @@ fn main() {
             transform_gizmo_bevy::TransformGizmoPlugin,
             bevy_egui::EguiPlugin::default(),
             avian3d::PhysicsPlugins::default(),
-            avian3d::debug_render::PhysicsDebugPlugin::default(),
+            avian3d::debug_render::PhysicsDebugPlugin,
             picking::plugin,
             raycast::plugin,
             load_save::plugin,
@@ -199,7 +199,7 @@ fn init_app(app: &mut App) {
                 primary_window: Some(Window {
                     title: "Prismata".to_string(),
                     position,
-                    resolution: bevy::window::WindowResolution::new(size.0 as u32, size.1 as u32),
+                    resolution: bevy::window::WindowResolution::new(size.0, size.1),
                     ..default()
                 }),
                 ..default()

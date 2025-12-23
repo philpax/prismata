@@ -237,6 +237,7 @@ pub struct ActiveTool {
     previous_tool: Tool,
 }
 impl ActiveTool {
+    #[allow(dead_code)]
     pub fn is_none(&self) -> bool {
         self.tool == Tool::None
     }

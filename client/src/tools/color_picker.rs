@@ -71,7 +71,11 @@ fn update_brush_viz(
     tool_color: Res<ToolColor>,
     our_color_picker: Res<OurColorPickerBrush>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tool_brushes: Query<(&mut Transform, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
+    mut tool_brushes: Query<(
+        &mut Transform,
+        &mut Visibility,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
 ) {
     let (mut transform, mut visibility, color) = tool_brushes.get_mut(our_color_picker.0).unwrap();
     if let Some(voxel) = voxel_under_cursor.ray_hit.filter(|_| cursor_visible.0) {
@@ -112,8 +116,11 @@ pub fn ui_top_left_panel(ui: &mut bevy_egui::egui::Ui, world: &mut World) {
                 egui::vec2(ui.available_height(), ui.available_height()),
                 egui::Sense::hover(),
             );
-            ui.painter()
-                .rect_filled(rect, egui::Rounding::ZERO, color::bevy_color_to_egui_hsv(c));
+            ui.painter().rect_filled(
+                rect,
+                egui::CornerRadius::ZERO,
+                color::bevy_color_to_egui_hsv(c),
+            );
         }
         None => {
             ui.label("No voxel under cursor");

@@ -86,8 +86,8 @@ impl Plugin for PrismPlugin {
             ))
             .add_message::<PrismError>()
             .add_message::<PrismRenderOutput>();
-            // Note: MSAA is now per-camera (component, not resource).
-            // Prism cameras are spawned with Msaa::Off component directly.
+        // Note: MSAA is now per-camera (component, not resource).
+        // Prism cameras are spawned with Msaa::Off component directly.
     }
 
     fn finish(&self, app: &mut App) {
@@ -486,7 +486,9 @@ fn spawn_prism(
     };
     mask_image.resize(size);
     let mask_image_handle = images.add(mask_image);
-    egui_user_textures.add_image(bevy_egui::EguiTextureHandle::Strong(mask_image_handle.clone()));
+    egui_user_textures.add_image(bevy_egui::EguiTextureHandle::Strong(
+        mask_image_handle.clone(),
+    ));
     commands.insert_resource(PrismMaskImage(mask_image_handle.clone()));
     commands.spawn((
         Camera3d::default(),
@@ -794,7 +796,10 @@ fn handle_render_complete_event(
     let (size_x, size_y) = (diffuse.width() as usize, diffuse.height() as usize);
     let mask_texture = ctx.load_texture(
         "prism_capture_mask",
-        egui::ColorImage::new([size_x, size_y], vec![egui::Color32::TRANSPARENT; size_x * size_y]),
+        egui::ColorImage::new(
+            [size_x, size_y],
+            vec![egui::Color32::TRANSPARENT; size_x * size_y],
+        ),
         egui::TextureOptions::default(),
     );
 

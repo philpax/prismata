@@ -11,9 +11,7 @@ use bevy::{
         render_graph::{
             NodeRunError, RenderGraphContext, RenderGraphExt, RenderLabel, ViewNode, ViewNodeRunner,
         },
-        render_resource::{
-            Buffer, BufferDescriptor, BufferUsages, Extent3d, MapMode,
-        },
+        render_resource::{Buffer, BufferDescriptor, BufferUsages, Extent3d, MapMode},
         renderer::{RenderContext, RenderDevice},
         view::{ViewDepthTexture, ViewTarget},
         Render, RenderSystems,

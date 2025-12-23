@@ -132,7 +132,11 @@ fn update_brush_viz(
     state: Res<FloorBrushState>,
     mut gizmos: Gizmos<MainCameraGizmosWithoutDepth>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tool_brushes: Query<(&mut Transform, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
+    mut tool_brushes: Query<(
+        &mut Transform,
+        &mut Visibility,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
 ) {
     let (mut transform, mut visibility, color) = tool_brushes.get_mut(our_floor_brush.0).unwrap();
 

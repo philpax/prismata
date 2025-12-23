@@ -2,7 +2,6 @@ use bevy::{
     asset::RenderAssetUsages,
     mesh::{Indices, PrimitiveTopology},
     prelude::*,
-    render::render_resource::*,
 };
 
 use crate::{
@@ -65,7 +64,9 @@ fn regenerate_entity_on_state_change(
 
     if let Some(entity) = preview_viz_entity.0.take() {
         if let Ok(child_of) = parent_query.get(entity) {
-            commands.entity(child_of.parent()).remove_children(&[entity]);
+            commands
+                .entity(child_of.parent())
+                .remove_children(&[entity]);
         }
         if let Ok(mut entity_commands) = commands.get_entity(entity) {
             // Should be taken care of by the preview entity being despawned,
@@ -99,9 +100,7 @@ fn regenerate_entity_on_state_change(
                 RaycastIgnore,
             ))
             .id();
-        commands
-            .entity(rendered.preview_entity)
-            .add_children(&[id]);
+        commands.entity(rendered.preview_entity).add_children(&[id]);
         preview_viz_entity.0 = Some(id);
     };
 

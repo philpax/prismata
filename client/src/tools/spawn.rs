@@ -6,9 +6,7 @@ use std::{
 
 use avian3d::prelude::{ColliderConstructor, ColliderConstructorHierarchy, RigidBody};
 use bevy::{
-    asset::io::AssetSourceId,
-    camera::visibility::RenderLayers,
-    prelude::*,
+    asset::io::AssetSourceId, camera::visibility::RenderLayers, prelude::*,
     tasks::futures_lite::StreamExt,
 };
 use bevy_egui::{egui, EguiContexts};
@@ -173,7 +171,8 @@ fn categorize_assets(
             "Previews" => {
                 spawnable.preview = {
                     let handle = assets.load(path.clone());
-                    let texture_id = egui_contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone()));
+                    let texture_id = egui_contexts
+                        .add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone()));
                     Some((path.clone(), handle, texture_id))
                 }
             }
@@ -197,9 +196,7 @@ fn on_preview_create(
     };
 
     if let Some(spawn_preview) = spawn_preview {
-        commands
-            .entity(spawn_preview.preview_id)
-            .despawn();
+        commands.entity(spawn_preview.preview_id).despawn();
     }
 
     let path = set_spawn_preview.0.clone();
@@ -219,9 +216,7 @@ fn on_preview_create(
 }
 
 fn on_preview_destroy(spawn_preview: Res<SpawnPreview>, mut commands: Commands) {
-    commands
-        .entity(spawn_preview.preview_id)
-        .despawn();
+    commands.entity(spawn_preview.preview_id).despawn();
     commands.remove_resource::<SpawnPreview>();
 }
 
@@ -267,7 +262,7 @@ pub fn ui_top_left_panel(ui: &mut egui::Ui, world: &mut World) {
     let images = world.resource::<Assets<Image>>();
 
     let mut spawn_preview_path = None;
-    egui::menu::bar(ui, |ui| {
+    egui::MenuBar::new().ui(ui, |ui| {
         for pack in &asset_packs.0 {
             ui.menu_button(pack.name.as_str(), |ui| {
                 egui::containers::ScrollArea::vertical().show(ui, |ui| {
