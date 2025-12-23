@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 serde = { workspace = true }
-native-tls = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 toml = { workspace = true }
 

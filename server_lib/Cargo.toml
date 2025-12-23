@@ -18,5 +18,5 @@ tracing-subscriber = { workspace = true }
 
 prismata_protocol = { path = "../protocol" }
 
-rucomfyui = { git = "https://github.com/philpax/rucomfyui.git" }
+rucomfyui = { git = "https://github.com/philpax/rucomfyui.git", default-features = false, features = ["rustls-tls", "typed_nodes"] }
 # rucomfyui = { path = "../../rucomfyui" }

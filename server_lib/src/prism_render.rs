@@ -7,6 +7,7 @@ use rucomfyui::{
         loaders::out::CheckpointLoaderSimpleOutput,
         types::{ConditioningOut, FloatOut, ImageOut, LatentOut, MaskOut, ModelOut, UntypedOut},
     },
+    upload::UploadType,
     workflow::{WorkflowInput, WorkflowMeta, WorkflowNode, WorkflowNodeId},
     WorkflowGraph,
 };
@@ -99,7 +100,9 @@ async fn upload_image(
     filename: &str,
 ) -> Result<(), Error> {
     let _decoder = image::codecs::png::PngDecoder::new(std::io::Cursor::new(image_data))?;
-    client.upload(filename, image_data.to_owned()).await?;
+    client
+        .upload_image(filename, image_data.to_owned(), UploadType::Input, true)
+        .await?;
     Ok(())
 }
 
@@ -146,17 +149,14 @@ fn workflow(
                     "positive",
                     g.add(ControlNetApply {
                         strength: depth_controlnet_strength,
-                        conditioning: g.add(ClipTextEncode::new(prompt, clip)),
-                        control_net: g.add(SetUnionControlNetType {
-                            control_net: g.add(ControlNetLoader::new(
-                                "diffusion_pytorch_model_promax.safetensors",
-                            )),
-                            type_: "depth",
-                        }),
+                        conditioning: g.add(CLIPTextEncode::new(prompt, clip)),
+                        control_net: g.add(ControlNetLoader::new(
+                            "diffusion_pytorch_model_promax.safetensors",
+                        )),
                         image: g.add(LoadImage::new(DEPTH_FILENAME)).image,
                     }),
                 )
-                .with_input("negative", g.add(ClipTextEncode::new("", clip)))
+                .with_input("negative", g.add(CLIPTextEncode::new("", clip)))
                 .with_input("vae", vae)
                 .with_input(
                     "pixels",
@@ -180,7 +180,7 @@ fn workflow(
             .with_meta(WorkflowMeta::new("Apply Fooocus Inpaint")),
     );
 
-    let vae_decode = g.add(VaeDecode {
+    let vae_decode = g.add(VAEDecode {
         samples: g.add(KSampler {
             seed,
             cfg: 5.0,
