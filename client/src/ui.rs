@@ -185,14 +185,14 @@ fn ui_left_panel(mut contexts: bevy_egui::EguiContexts, active_tool: ResMut<tool
 }
 
 #[derive(Resource)]
-struct RightPanelDockState(#[allow(dead_code)] egui_dock::DockState<RightPanelTab>);
+struct RightPanelDockState(egui_dock::DockState<RightPanelTab>);
 impl Default for RightPanelDockState {
     fn default() -> Self {
         Self(egui_dock::DockState::new(RightPanelTab::ALL.to_vec()))
     }
 }
 fn ui_right_panel<'a>(
-    _right_panel_dock_state: ResMut<RightPanelDockState>,
+    mut right_panel_dock_state: ResMut<RightPanelDockState>,
     mut contexts: bevy_egui::EguiContexts,
     tool_color: ResMut<tools::ToolColor>,
     last_used_colors: Res<tools::LastUsedColors>,
@@ -219,66 +219,27 @@ fn ui_right_panel<'a>(
         .default_size(egui::vec2(320.0, 670.0))
         .show(ctx, |ui| {
             egui::Frame::window(ui.style()).show(ui, |ui| {
-                // TODO(Bevy 0.17): egui_dock 0.15 uses egui 0.30, incompatible with bevy_egui 0.38 (egui 0.33)
-                // egui_dock::DockArea::new(&mut right_panel_dock_state.0).show_inside(
-                //     ui,
-                //     &mut RightPanelViewer {
-                //         tool_color,
-                //         last_used_colors,
-                //
-                //         voxels_per_meter,
-                //         recreate_start_scene_writer,
-                //         project_name,
-                //         request_save_writer,
-                //         request_load_writer,
-                //         floor_color,
-                //         sun_angle,
-                //
-                //         chunk_visualization,
-                //         chunks,
-                //         chunk_datas,
-                //         cursor_ray_hit,
-                //         cursor_ray_hit_without_draft,
-                //     },
-                // );
+                egui_dock::DockArea::new(&mut right_panel_dock_state.0).show_inside(
+                    ui,
+                    &mut RightPanelViewer {
+                        tool_color,
+                        last_used_colors,
 
-                // Temporary UI without DockArea
-                let mut viewer = RightPanelViewer {
-                    tool_color,
-                    last_used_colors,
-                    voxels_per_meter,
-                    recreate_start_scene_writer,
-                    project_name,
-                    request_save_writer,
-                    request_load_writer,
-                    floor_color,
-                    sun_angle,
-                    chunk_visualization,
-                    chunks,
-                    chunk_datas,
-                    cursor_ray_hit,
-                    cursor_ray_hit_without_draft,
-                };
+                        voxels_per_meter,
+                        recreate_start_scene_writer,
+                        project_name,
+                        request_save_writer,
+                        request_load_writer,
+                        floor_color,
+                        sun_angle,
 
-                ui.horizontal(|ui| {
-                    if ui.button("Tools").clicked() {
-                        // Switch to tools tab
-                    }
-                    if ui.button("Settings").clicked() {
-                        // Switch to settings tab
-                    }
-                    if ui.button("Info").clicked() {
-                        // Switch to info tab
-                    }
-                });
-                ui.separator();
-
-                // For now, show all tabs
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.collapsing("Tools", |ui| viewer.tools(ui));
-                    ui.collapsing("Settings", |ui| viewer.settings(ui));
-                    ui.collapsing("Info", |ui| viewer.info(ui));
-                });
+                        chunk_visualization,
+                        chunks,
+                        chunk_datas,
+                        cursor_ray_hit,
+                        cursor_ray_hit_without_draft,
+                    },
+                );
             });
         });
 }
@@ -315,20 +276,19 @@ struct RightPanelViewer<'w, 's, 'a> {
     cursor_ray_hit: Res<'w, CursorRayHit>,
     cursor_ray_hit_without_draft: Res<'w, CursorRayHitWithoutDraft>,
 }
-// TODO(Bevy 0.17): Commented out with egui_dock
-// impl<'w, 's, 'a> egui_dock::TabViewer for RightPanelViewer<'w, 's, 'a> {
-//     type Tab = RightPanelTab;
-//     fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {
-//         tab.to_string().into()
-//     }
-//     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
-//         match *tab {
-//             RightPanelTab::Tools => self.tools(ui),
-//             RightPanelTab::Settings => self.settings(ui),
-//             RightPanelTab::Info => self.info(ui),
-//         }
-//     }
-// }
+impl<'w, 's, 'a> egui_dock::TabViewer for RightPanelViewer<'w, 's, 'a> {
+    type Tab = RightPanelTab;
+    fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {
+        tab.to_string().into()
+    }
+    fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
+        match *tab {
+            RightPanelTab::Tools => self.tools(ui),
+            RightPanelTab::Settings => self.settings(ui),
+            RightPanelTab::Info => self.info(ui),
+        }
+    }
+}
 impl RightPanelViewer<'_, '_, '_> {
     fn tools(&mut self, ui: &mut egui::Ui) {
         static PALETTE: LazyLock<Vec<(Color, egui::Color32)>> = LazyLock::new(|| {
