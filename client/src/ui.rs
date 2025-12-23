@@ -577,19 +577,16 @@ fn ui_inspector(
         .show(egui_context.get_mut(), |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 // equivalent to `WorldInspectorPlugin`
-                // TODO: bevy_inspector_egui version mismatch with egui - fix when versions align
-                // bevy_inspector_egui::bevy_inspector::ui_for_world(world, ui);
+                bevy_inspector_egui::bevy_inspector::ui_for_world(world, ui);
 
-                egui::CollapsingHeader::new("Materials").show(ui, |_ui| {
-                    // TODO: bevy_inspector_egui version mismatch with egui - fix when versions align
-                    // bevy_inspector_egui::bevy_inspector::ui_for_assets::<StandardMaterial>(
-                    //     world, ui,
-                    // );
+                egui::CollapsingHeader::new("Materials").show(ui, |ui| {
+                    bevy_inspector_egui::bevy_inspector::ui_for_assets::<StandardMaterial>(
+                        world, ui,
+                    );
                 });
 
                 ui.heading("Entities");
-                // TODO: bevy_inspector_egui version mismatch with egui - fix when versions align
-                // bevy_inspector_egui::bevy_inspector::ui_for_world_entities(world, ui);
+                bevy_inspector_egui::bevy_inspector::ui_for_entities(world, ui);
             });
         });
     *world.resource_mut::<InspectorOpen>() = InspectorOpen(inspector_open);
