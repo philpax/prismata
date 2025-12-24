@@ -4,7 +4,7 @@ use bevy::{
 };
 use transform_gizmo_bevy::GizmoTarget;
 
-use crate::{tools::ActiveTool, ui::CursorVisible, util};
+use crate::{ui::CursorVisible, util};
 
 #[derive(Component)]
 /// When attached to an entity, all [`Mesh`] children of the entity will be pickable.
@@ -22,10 +22,7 @@ pub struct Selected;
 pub fn plugin(app: &mut App) {
     // Note: DefaultPickingPlugins is now included in DefaultPlugins as of Bevy 0.15+
     app.add_plugins(MeshPickingPlugin)
-        .add_systems(
-            PreUpdate,
-            (process_pickable_children, toggle_picking_enabled).chain(),
-        )
+        .add_systems(PreUpdate, process_pickable_children)
         .add_systems(Update, (handle_selection_clicks, update_picking).chain());
 }
 
@@ -59,26 +56,21 @@ fn process_pickable_children(
     }
 }
 
-fn toggle_picking_enabled(
-    _gizmo_targets: Query<&GizmoTarget>,
-    _cursor_visible: Res<CursorVisible>,
-    _active_tool: Res<ActiveTool>,
-    _picking_settings: ResMut<MeshPickingSettings>,
-) {
-    // TODO(Bevy 0.17): MeshPickingSettings no longer has is_enabled/is_hoverable field.
-    // Need to implement picking enable/disable using require_markers + Pickable component,
-    // or another approach. For now, picking is always enabled.
-}
-
 /// Handle click events to toggle selection
 fn handle_selection_clicks(
     mut click_events: MessageReader<Pointer<Click>>,
     mut commands: Commands,
+    cursor_visible: Res<CursorVisible>,
     selected_query: Query<(), With<Selected>>,
     pickable_child_query: Query<(), With<PickableChild>>,
     parent_query: Query<&ChildOf>,
     pickable_children_query: Query<(), With<PickableChildren>>,
 ) {
+    // Don't process selection clicks when cursor is hidden (e.g., during camera control)
+    if !cursor_visible.0 {
+        return;
+    }
+
     for click in click_events.read() {
         let mut entity = click.entity;
 
