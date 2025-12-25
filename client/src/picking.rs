@@ -1,7 +1,7 @@
 use bevy::{
     picking::{
         events::Click,
-        mesh_picking::{MeshPickingPlugin, MeshPickingSettings},
+        mesh_picking::MeshPickingPlugin,
         prelude::*,
     },
     prelude::*,
@@ -12,57 +12,16 @@ use crate::{ui::CursorVisible, util};
 
 #[derive(Component)]
 /// When attached to an entity, all [`Mesh`] children of the entity will be pickable.
+/// Used to identify the root entity when a child mesh is clicked.
 pub struct PickableChildren;
-
-#[derive(Component)]
-/// Attached by [`process_pickable_children`] to all entities made pickable as a result
-/// of pickable parents. Used to determine that the root should be used as the gizmo target.
-struct PickableChild;
 
 #[derive(Component)]
 /// Tracks whether an entity is currently selected
 pub struct Selected;
 
 pub fn plugin(app: &mut App) {
-    // Configure mesh picking to be opt-in rather than opt-out.
-    // Only entities with explicit Pickable components will be pickable.
     app.add_plugins(MeshPickingPlugin)
-        .insert_resource(MeshPickingSettings {
-            require_markers: true,
-            ..default()
-        })
-        .add_systems(PreUpdate, process_pickable_children)
         .add_systems(Update, (handle_selection_clicks, update_picking).chain());
-}
-
-fn process_pickable_children(
-    pickable_children_query: Query<Entity, With<PickableChildren>>,
-    children_query: Query<&Children>,
-    mesh_query: Query<&Mesh3d, Without<Pickable>>,
-    mut commands: Commands,
-) {
-    fn add_pickable(
-        entity: Entity,
-        children_query: &Query<&Children>,
-        mesh_query: &Query<&Mesh3d, Without<Pickable>>,
-        commands: &mut Commands,
-    ) {
-        if mesh_query.contains(entity) {
-            commands
-                .entity(entity)
-                .insert((Pickable::default(), PickableChild));
-        }
-
-        if let Ok(children) = children_query.get(entity) {
-            for child in children.iter() {
-                add_pickable(child, children_query, mesh_query, commands);
-            }
-        }
-    }
-
-    for entity in pickable_children_query.iter() {
-        add_pickable(entity, &children_query, &mesh_query, &mut commands);
-    }
 }
 
 /// Handle click events to toggle selection
@@ -71,7 +30,6 @@ fn handle_selection_clicks(
     mut commands: Commands,
     cursor_visible: Res<CursorVisible>,
     selected_query: Query<(), With<Selected>>,
-    pickable_child_query: Query<(), With<PickableChild>>,
     parent_query: Query<&ChildOf>,
     pickable_children_query: Query<(), With<PickableChildren>>,
 ) {
@@ -83,13 +41,11 @@ fn handle_selection_clicks(
     for click in click_events.read() {
         let mut entity = click.entity;
 
-        // If this is a pickable child, find its parent
-        if pickable_child_query.contains(entity) {
-            if let Some(parent) =
-                util::find_parent_with_component(&parent_query, &pickable_children_query, entity)
-            {
-                entity = parent;
-            }
+        // If clicked entity is a child of a PickableChildren entity, select the parent instead
+        if let Some(parent) =
+            util::find_parent_with_component(&parent_query, &pickable_children_query, entity)
+        {
+            entity = parent;
         }
 
         // Toggle selection

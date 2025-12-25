@@ -1,4 +1,4 @@
-use bevy::{camera::visibility::RenderLayers, input::mouse::MouseMotion, prelude::*};
+use bevy::{camera::visibility::RenderLayers, input::mouse::MouseMotion, picking::prelude::Pickable, prelude::*};
 use bevy_egui::egui;
 
 use crate::{
@@ -101,6 +101,7 @@ fn create_brush(
             AlphaPulse::new(0.25, 1.0),
             RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
+            Pickable::IGNORE,
         ))
         .id();
     commands.insert_resource(OurFloorBrush(id));

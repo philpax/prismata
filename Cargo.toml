@@ -12,7 +12,6 @@ bevy_egui = { git = "https://github.com/mvlabat/bevy_egui" }
 bevy_embedded_assets = "0.14"
 bevy-inspector-egui = "0.35.0"
 bevy_mod_reqwest = "0.20"
-bevy_transform = { version = "*", features = ["serialize"] }
 bytemuck = "1"
 clap = { version = "4.5.18", features = ["derive"] }
 crossbeam-channel = "0.5.13"

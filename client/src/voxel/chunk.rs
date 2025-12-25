@@ -16,6 +16,7 @@ use bevy::{
     camera::visibility::RenderLayers,
     mesh::{Indices, PrimitiveTopology},
     pbr::{ExtendedMaterial, MaterialExtension},
+    picking::prelude::Pickable,
     prelude::*,
     render::render_resource::AsBindGroup,
     shader::ShaderRef,
@@ -158,6 +159,7 @@ pub struct ChunkBundle {
     pub pending_spheres: ChunkPendingChunkSpheres,
     pub pending_dynamic_updates: ChunkPendingDynamicUpdates,
     pub raycast_ignore: RaycastIgnore,
+    pub pickable: Pickable,
 }
 impl ChunkBundle {
     pub fn new(
@@ -173,6 +175,7 @@ impl ChunkBundle {
             pending_spheres: ChunkPendingChunkSpheres(pending_spheres),
             pending_dynamic_updates: ChunkPendingDynamicUpdates::default(),
             raycast_ignore: RaycastIgnore,
+            pickable: Pickable::IGNORE,
         }
     }
 }

@@ -74,8 +74,13 @@ impl CameraController {
     }
 }
 
+/// System set for camera setup, used for ordering other systems that depend on the egui context.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CameraSetup;
+
 pub fn plugin(app: &mut App) {
-    app.add_systems(Startup, setup).add_systems(
+    app.add_systems(Startup, setup.in_set(CameraSetup))
+        .add_systems(
         Update,
         (
             swap_camera,

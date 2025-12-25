@@ -1,6 +1,6 @@
 use web_time::Duration;
 
-use bevy::{camera::visibility::RenderLayers, prelude::*};
+use bevy::{camera::visibility::RenderLayers, picking::prelude::Pickable, prelude::*};
 use bevy_egui::egui;
 
 use crate::{
@@ -59,6 +59,7 @@ fn create_brush(
             AlphaPulse::new(0.25, 1.0),
             RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
+            Pickable::IGNORE,
         ))
         .id();
     commands.insert_resource(OurSphereBrush(id));

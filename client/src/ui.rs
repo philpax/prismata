@@ -464,7 +464,10 @@ impl RightPanelViewer<'_, '_, '_> {
 
 fn ui_top_left_panel(
     world: &mut World,
-    egui_context_query: &mut QueryState<&'static mut bevy_egui::EguiContext, With<PrimaryWindow>>,
+    egui_context_query: &mut QueryState<
+        &'static mut bevy_egui::EguiContext,
+        With<bevy_egui::PrimaryEguiContext>,
+    >,
 ) {
     let Some(mut egui_context) = egui_context_query
         .single_mut(world)
@@ -514,7 +517,10 @@ fn ui_toasts(mut contexts: bevy_egui::EguiContexts, mut toasts: ResMut<Toasts>) 
 
 fn ui_inspector(
     world: &mut World,
-    egui_context_query: &mut QueryState<&'static mut bevy_egui::EguiContext, With<PrimaryWindow>>,
+    egui_context_query: &mut QueryState<
+        &'static mut bevy_egui::EguiContext,
+        With<bevy_egui::PrimaryEguiContext>,
+    >,
 ) {
     let Some(mut egui_context) = egui_context_query
         .single_mut(world)

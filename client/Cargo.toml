@@ -31,13 +31,14 @@ bevy = { workspace = true, features = [
     "default_font",
     "webgl2",
     "sysinfo_plugin",
+    "serialize",
+    "reflect_auto_register",
 ] }
 bevy_async_task = { workspace = true }
 bevy_egui = { workspace = true }
 bevy_embedded_assets = { workspace = true }
 bevy-inspector-egui = { workspace = true }
 bevy_mod_reqwest = { workspace = true }
-bevy_transform = { workspace = true }
 bytemuck = { workspace = true }
 crossbeam-channel = { workspace = true }
 data-encoding = { workspace = true }

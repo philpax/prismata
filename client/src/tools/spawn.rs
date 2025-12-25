@@ -6,8 +6,8 @@ use std::{
 
 use avian3d::prelude::{ColliderConstructor, ColliderConstructorHierarchy, RigidBody};
 use bevy::{
-    asset::io::AssetSourceId, camera::visibility::RenderLayers, prelude::*,
-    tasks::futures_lite::StreamExt,
+    asset::io::AssetSourceId, camera::visibility::RenderLayers, picking::prelude::Pickable,
+    prelude::*, tasks::futures_lite::StreamExt,
 };
 use bevy_egui::{egui, EguiContexts};
 
@@ -53,6 +53,7 @@ pub fn plugin(app: &mut App) {
         .add_systems(
             Update,
             (
+                register_preview_textures.run_if(resource_exists::<PendingTextureRegistration>),
                 on_preview_create,
                 preview_update.run_if(resource_exists::<SpawnPreview>),
                 on_preview_destroy.run_if(brush_should_be_destroyed::<SpawnPreview>(Tool::Spawn)),
@@ -67,7 +68,7 @@ pub fn plugin(app: &mut App) {
         .add_systems(OnEnter(AppState::Play), add_collider_to_spawnables);
 }
 
-fn startup(mut egui_contexts: EguiContexts, assets: Res<AssetServer>, mut commands: Commands) {
+fn startup(assets: Res<AssetServer>, mut commands: Commands) {
     let reader = assets
         .get_source(AssetSourceId::default())
         .unwrap()
@@ -81,10 +82,11 @@ fn startup(mut egui_contexts: EguiContexts, assets: Res<AssetServer>, mut comman
             .collect::<Vec<_>>()
             .await
     });
-    let mut asset_packs = categorize_assets(&assets, &mut egui_contexts, &paths);
+    let mut asset_packs = categorize_assets(&assets, &paths);
     asset_packs.sort_by(|a, b| a.name.cmp(&b.name));
 
     commands.insert_resource(AssetPacks(asset_packs));
+    commands.insert_resource(PendingTextureRegistration);
 }
 
 #[derive(Resource)]
@@ -95,6 +97,10 @@ struct SpawnPreview {
 
 #[derive(Resource)]
 struct AssetPacks(Vec<AssetPack>);
+
+/// Marker resource indicating textures still need to be registered with egui.
+#[derive(Resource)]
+struct PendingTextureRegistration;
 
 #[derive(Message)]
 struct SetSpawnPreview(PathBuf);
@@ -109,14 +115,11 @@ struct AssetPack {
 struct Spawnable {
     name: String,
     model: Option<PathBuf>,
-    preview: Option<(PathBuf, Handle<Image>, egui::TextureId)>,
+    /// Preview image - texture_id is None until registered with egui context.
+    preview: Option<(PathBuf, Handle<Image>, Option<egui::TextureId>)>,
 }
 
-fn categorize_assets(
-    assets: &AssetServer,
-    egui_contexts: &mut EguiContexts,
-    paths: &[PathBuf],
-) -> Vec<AssetPack> {
+fn categorize_assets(assets: &AssetServer, paths: &[PathBuf]) -> Vec<AssetPack> {
     let mut asset_packs: HashMap<String, AssetPack> = HashMap::new();
 
     for path in paths {
@@ -169,18 +172,42 @@ fn categorize_assets(
         match category {
             "Models" => spawnable.model = Some(path.clone()),
             "Previews" => {
-                spawnable.preview = {
-                    let handle = assets.load(path.clone());
-                    let texture_id = egui_contexts
-                        .add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone()));
-                    Some((path.clone(), handle, texture_id))
-                }
+                let handle = assets.load(path.clone());
+                // texture_id will be registered later once egui context is available
+                spawnable.preview = Some((path.clone(), handle, None));
             }
             _ => {} // This case should never occur due to the earlier check
         }
     }
 
     asset_packs.into_values().collect()
+}
+
+/// Registers preview textures with the egui context once it's available.
+fn register_preview_textures(
+    mut egui_contexts: EguiContexts,
+    mut asset_packs: ResMut<AssetPacks>,
+    mut commands: Commands,
+) {
+    // Check if egui context is available
+    let Ok(ctx) = egui_contexts.ctx_mut() else {
+        return;
+    };
+    let _ = ctx; // Just needed to verify context exists
+
+    for pack in &mut asset_packs.0 {
+        for spawnable in pack.spawnables.values_mut() {
+            if let Some((_, handle, texture_id @ None)) = &mut spawnable.preview {
+                *texture_id = Some(
+                    egui_contexts
+                        .add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())),
+                );
+            }
+        }
+    }
+
+    // Remove the marker once all textures are registered
+    commands.remove_resource::<PendingTextureRegistration>();
 }
 
 fn on_preview_create(
@@ -210,6 +237,7 @@ fn on_preview_create(
                     .unwrap_or_default(),
             ),
             RaycastIgnore,
+            Pickable::IGNORE,
         ))
         .id();
     commands.insert_resource(SpawnPreview { preview_id, path });
@@ -261,41 +289,51 @@ pub fn ui_top_left_panel(ui: &mut egui::Ui, world: &mut World) {
     let asset_packs = world.resource::<AssetPacks>();
     let images = world.resource::<Assets<Image>>();
 
-    let mut spawn_preview_path = None;
-    egui::MenuBar::new().ui(ui, |ui| {
-        for pack in &asset_packs.0 {
-            ui.menu_button(pack.name.as_str(), |ui| {
-                egui::containers::ScrollArea::vertical().show(ui, |ui| {
-                    let mut values = pack.spawnables.values().collect::<Vec<_>>();
-                    values.sort_by(|a, b| a.name.cmp(&b.name));
-                    for spawnable in values {
-                        let Some(path) = spawnable.model.as_ref() else {
-                            continue;
-                        };
+    if asset_packs.0.is_empty() {
+        ui.label("No asset packs found.");
+        return;
+    }
 
-                        let image = spawnable.preview.as_ref().map(|p| {
-                            let size = images.get(&p.1).unwrap().size();
-                            egui::Image::new(egui::load::SizedTexture::new(
-                                p.2,
-                                egui::vec2(size.x as f32, size.y as f32),
-                            ))
-                            .max_size(egui::vec2(64.0, 64.0))
+    let mut spawn_preview_path = None;
+    for pack in &asset_packs.0 {
+        ui.menu_button(pack.name.as_str(), |ui| {
+            egui::containers::ScrollArea::vertical().show(ui, |ui| {
+                let mut values = pack.spawnables.values().collect::<Vec<_>>();
+                values.sort_by(|a, b| a.name.cmp(&b.name));
+                for spawnable in values {
+                    let Some(path) = spawnable.model.as_ref() else {
+                        continue;
+                    };
+
+                    // Only show image if texture_id has been registered
+                    let image = spawnable
+                        .preview
+                        .as_ref()
+                        .and_then(|(_, handle, texture_id)| {
+                            let texture_id = (*texture_id)?;
+                            let size = images.get(handle)?.size();
+                            Some(
+                                egui::Image::new(egui::load::SizedTexture::new(
+                                    texture_id,
+                                    egui::vec2(size.x as f32, size.y as f32),
+                                ))
+                                .max_size(egui::vec2(64.0, 64.0)),
+                            )
                         });
 
-                        if ui
-                            .add(egui::Button::opt_image_and_text(
-                                image,
-                                Some(egui::WidgetText::from(spawnable.name.as_str())),
-                            ))
-                            .clicked()
-                        {
-                            spawn_preview_path = Some(path.clone());
-                        }
+                    if ui
+                        .add(egui::Button::opt_image_and_text(
+                            image,
+                            Some(egui::WidgetText::from(spawnable.name.as_str())),
+                        ))
+                        .clicked()
+                    {
+                        spawn_preview_path = Some(path.clone());
                     }
-                });
+                }
             });
-        }
-    });
+        });
+    }
 
     if let Some(path) = spawn_preview_path {
         world.write_message(SetSpawnPreview(path));

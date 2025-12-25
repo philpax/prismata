@@ -1,6 +1,7 @@
 use bevy::{
     asset::RenderAssetUsages,
     mesh::{Indices, PrimitiveTopology},
+    picking::prelude::Pickable,
     prelude::*,
 };
 
@@ -98,6 +99,7 @@ fn regenerate_entity_on_state_change(
                 })),
                 Transform::default(),
                 RaycastIgnore,
+                Pickable::IGNORE,
             ))
             .id();
         commands.entity(rendered.preview_entity).add_children(&[id]);
