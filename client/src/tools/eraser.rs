@@ -1,6 +1,6 @@
 use web_time::Duration;
 
-use bevy::{prelude::*, render::view::RenderLayers};
+use bevy::{camera::visibility::RenderLayers, picking::prelude::Pickable, prelude::*};
 use bevy_egui::egui;
 
 use crate::{
@@ -49,27 +49,26 @@ fn create_brush(
     let id = commands
         .spawn((
             Name::new("Eraser Brush"),
-            PbrBundle {
-                mesh: meshes.add(Sphere { radius: 1.0 }.mesh().ico(5).unwrap()),
-                material: materials.add(StandardMaterial {
-                    alpha_mode: AlphaMode::Blend,
-                    base_color: Color::linear_rgba(1.0, 0.0, 0.0, 1.0),
-                    unlit: true,
-                    ..default()
-                }),
-                visibility: Visibility::Hidden,
+            Mesh3d(meshes.add(Sphere { radius: 1.0 }.mesh().ico(5).unwrap())),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                alpha_mode: AlphaMode::Blend,
+                base_color: Color::linear_rgba(1.0, 0.0, 0.0, 1.0),
+                unlit: true,
                 ..default()
-            },
+            })),
+            Transform::default(),
+            Visibility::Hidden,
             AlphaPulse::new(0.25, 0.5),
-            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
+            Pickable::IGNORE,
         ))
         .id();
     commands.insert_resource(OurEraserBrush(id));
 }
 
 fn destroy_brush(brush: Res<OurEraserBrush>, mut commands: Commands) {
-    commands.entity(brush.0).despawn_recursive();
+    commands.entity(brush.0).despawn();
     commands.remove_resource::<OurEraserBrush>();
 }
 
@@ -97,7 +96,7 @@ fn on_use(
     cursor_ray_hit: Res<CursorRayHit>,
     settings: Res<OurEraserBrushSettings>,
     voxels_per_meter: Res<voxel::VoxelsPerMeter>,
-    mut pending_dynamic_updates: EventWriter<voxel::ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageWriter<voxel::ChunkPendingDynamicUpdate>,
 ) {
     let Some(center) = cursor_ray_hit.coords() else {
         return;

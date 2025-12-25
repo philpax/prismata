@@ -5,20 +5,21 @@
 //! efficient than updating each voxel individually. It also prevents issues that arise from
 //! chunks not existing prior to the update.
 
-use std::sync::{atomic::AtomicBool, Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{atomic::AtomicBool, Arc, Mutex},
+};
 
 use avian3d::prelude::*;
 use bevy::{
-    asset::embedded_asset,
+    asset::{embedded_asset, RenderAssetUsages},
+    camera::visibility::RenderLayers,
+    mesh::{Indices, PrimitiveTopology},
     pbr::{ExtendedMaterial, MaterialExtension},
+    picking::prelude::Pickable,
     prelude::*,
-    render::{
-        mesh::{Indices, PrimitiveTopology},
-        render_asset::RenderAssetUsages,
-        render_resource::{AsBindGroup, ShaderRef},
-        view::RenderLayers,
-    },
-    utils::HashMap,
+    render::render_resource::AsBindGroup,
+    shader::ShaderRef,
 };
 use bevy_egui::{egui, EguiContexts};
 
@@ -39,7 +40,7 @@ pub fn plugin(app: &mut App) {
         .add_plugins(MaterialPlugin::<
             ExtendedMaterial<StandardMaterial, MatteMaterialExtension>,
         >::default())
-        .add_event::<ChunkPendingDynamicUpdate>()
+        .add_message::<ChunkPendingDynamicUpdate>()
         .add_systems(Startup, setup)
         .add_systems(PreUpdate, build_chunk_map)
         .add_systems(
@@ -158,6 +159,7 @@ pub struct ChunkBundle {
     pub pending_spheres: ChunkPendingChunkSpheres,
     pub pending_dynamic_updates: ChunkPendingDynamicUpdates,
     pub raycast_ignore: RaycastIgnore,
+    pub pickable: Pickable,
 }
 impl ChunkBundle {
     pub fn new(
@@ -173,6 +175,7 @@ impl ChunkBundle {
             pending_spheres: ChunkPendingChunkSpheres(pending_spheres),
             pending_dynamic_updates: ChunkPendingDynamicUpdates::default(),
             raycast_ignore: RaycastIgnore,
+            pickable: Pickable::IGNORE,
         }
     }
 }
@@ -189,7 +192,7 @@ impl ChunkLastUpdated {
 #[allow(clippy::type_complexity)]
 pub type ChunkDynamicUpdate = Arc<dyn Fn(&mut ChunkData, ChunkCoords) -> bool + Send + Sync>;
 
-#[derive(Event)]
+#[derive(Message)]
 /// When sent, the associated chunk will be updated with the given function.
 /// If the chunk does not exist, it will be created before the update is applied.
 pub struct ChunkPendingDynamicUpdate {
@@ -263,7 +266,7 @@ fn build_chunk_map(mut chunks: ResMut<Chunks>, chunk_data: Query<(&ChunkCoords, 
 }
 
 fn ensure_chunks_exist_for_updates(
-    mut pending_dynamic_updates: EventReader<ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageReader<ChunkPendingDynamicUpdate>,
     mut all_chunks: ResMut<Chunks>,
     chunk_size_meters: Res<ChunkSizeMeters>,
     mut chunks: Query<&mut ChunkLastUpdated>,
@@ -293,7 +296,7 @@ fn ensure_chunks_exist_for_updates(
 }
 
 fn extract_updates_into_chunks(
-    mut pending_dynamic_updates: EventReader<ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageReader<ChunkPendingDynamicUpdate>,
     mut chunks: Query<&mut ChunkPendingDynamicUpdates>,
     all_chunks: Res<Chunks>,
 ) {
@@ -428,11 +431,11 @@ fn promote_draft_voxels_to_real_voxels(
 
 fn switch_materials_when_draft_chunk(
     draft_material: Res<ChunkDraftMaterial>,
-    mut chunks: Query<(Entity, &mut Handle<StandardMaterial>), Added<ChunkHasDraftVoxels>>,
+    mut chunks: Query<(Entity, &mut MeshMaterial3d<StandardMaterial>), Added<ChunkHasDraftVoxels>>,
     mut commands: Commands,
 ) {
     for (entity, mut material) in chunks.iter_mut() {
-        *material = draft_material.clone();
+        material.0 = draft_material.0.clone();
         commands.entity(entity).insert(AlphaPulse::new(0.2, 0.5));
     }
 }
@@ -440,12 +443,12 @@ fn switch_materials_when_draft_chunk(
 fn switch_materials_when_no_longer_draft_chunk(
     standard_material: Res<ChunkMaterial>,
     mut removed_draft_chunks: RemovedComponents<ChunkHasDraftVoxels>,
-    mut chunks: Query<(Entity, &mut Handle<StandardMaterial>)>,
+    mut chunks: Query<(Entity, &mut MeshMaterial3d<StandardMaterial>)>,
     mut commands: Commands,
 ) {
     for id in removed_draft_chunks.read() {
         if let Ok((entity, mut material)) = chunks.get_mut(id) {
-            *material = standard_material.clone();
+            material.0 = standard_material.0.clone();
             commands.entity(entity).remove::<AlphaPulse>();
         }
     }
@@ -468,7 +471,7 @@ fn garbage_collect_chunks(
     }
     for chunk_coords in chunks_to_remove {
         if let Some(chunk_entity) = all_chunks.remove(&chunk_coords) {
-            commands.entity(chunk_entity).despawn_recursive();
+            commands.entity(chunk_entity).despawn();
         }
     }
     let new_chunk_count = all_chunks.0.len();
@@ -481,7 +484,7 @@ fn garbage_collect_chunks(
 fn rebuild_updated_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     mut updated_chunks: Query<
-        (Entity, &ChunkData, &ChunkCoords, Option<&mut Handle<Mesh>>),
+        (Entity, &ChunkData, &ChunkCoords, Option<&mut Mesh3d>),
         Changed<ChunkData>,
     >,
     chunk_material: Res<ChunkMaterial>,
@@ -493,30 +496,27 @@ fn rebuild_updated_chunks(
     for (chunk_id, chunk_data, chunk_coords, mesh) in updated_chunks.iter_mut() {
         let handle = meshes.add(build_mesh(chunk_data, false));
         if let Some(mut mesh) = mesh {
-            *mesh = handle;
+            mesh.0 = handle;
         } else {
             let translation = chunk_coords.to_world(*chunk_size_meters);
-            commands.entity(chunk_id).insert(PbrBundle {
-                mesh: handle,
-                material: chunk_material.clone(),
-                transform: Transform::from_translation(translation)
+            commands.entity(chunk_id).insert((
+                Mesh3d(handle),
+                MeshMaterial3d(chunk_material.0.clone()),
+                Transform::from_translation(translation)
                     .with_scale(Vec3::splat(voxel_size_meters.0)),
-                ..default()
-            });
+            ));
         }
 
         commands
             .entity(chunk_id)
-            .despawn_descendants()
+            .despawn_related::<Children>()
             .with_children(|b| {
                 let handle = meshes.add(build_mesh(chunk_data, true));
                 b.spawn((
-                    MaterialMeshBundle {
-                        mesh: handle,
-                        material: chunk_mask_material.clone(),
-                        ..default()
-                    },
-                    RenderLayers::layer(MASK_CAMERA_ONLY_LAYER),
+                    Mesh3d(handle),
+                    MeshMaterial3d(chunk_mask_material.clone()),
+                    Transform::default(),
+                    RenderLayers::layer(MASK_CAMERA_ONLY_LAYER as usize),
                 ));
             });
     }
@@ -724,19 +724,18 @@ fn visualize_chunks(
     if !chunk_visualization.0 {
         return;
     }
-    let Ok((our_camera, our_camera_transform)) = our_camera.get_single() else {
+    let Ok((our_camera, our_camera_transform)) = our_camera.single() else {
         return;
     };
 
-    let egui_context = egui_contexts.ctx_mut();
+    let egui_context = egui_contexts.ctx_mut().unwrap();
     let font = egui::TextStyle::Monospace.resolve(&egui_context.style());
 
     for (transform, coords, has_draft_voxels) in chunks.iter() {
         let position = transform.translation + Vec3::splat(chunk_size_meters.0 / 2.0);
         gizmos.primitive_3d(
             &Cuboid::from_size(Vec3::splat(chunk_size_meters.0)),
-            position,
-            transform.rotation,
+            Isometry3d::new(position, transform.rotation),
             if has_draft_voxels {
                 Color::linear_rgb(1.0, 1.0, 0.0)
             } else {
@@ -744,7 +743,7 @@ fn visualize_chunks(
             },
         );
 
-        let Some(screen_pos) = our_camera.world_to_viewport(our_camera_transform, position) else {
+        let Ok(screen_pos) = our_camera.world_to_viewport(our_camera_transform, position) else {
             continue;
         };
         egui_context.debug_painter().text(

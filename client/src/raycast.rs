@@ -1,5 +1,4 @@
-use bevy::{prelude::*, window::PrimaryWindow};
-use bevy_mod_raycast::prelude::{IntersectionData, Raycast, RaycastSettings, RaycastVisibility};
+use bevy::{picking::mesh_picking::ray_cast::MeshRayCast, prelude::*, window::PrimaryWindow};
 
 use crate::{
     camera::MainCamera,
@@ -42,11 +41,11 @@ pub fn plugin(app: &mut App) {
 }
 
 pub fn raycast(
-    raycast: &mut Raycast,
+    raycast: &mut MeshRayCast,
     chunks: &Chunks,
     chunk_datas: &Query<&ChunkData>,
     raycast_ignores: &Query<(), With<RaycastIgnore>>,
-    parents: &Query<&Parent>,
+    parents: &Query<&ChildOf>,
     voxel_size_meters: VoxelSizeMeters,
     ray: Ray3d,
     max_distance: f32,
@@ -54,29 +53,41 @@ pub fn raycast(
 ) -> Option<RayHit> {
     let voxel_per_meters = VoxelsPerMeter::from(voxel_size_meters);
 
-    let world_raycast = raycast.cast_ray(
-        ray,
-        &RaycastSettings {
-            visibility: RaycastVisibility::MustBeVisibleAndInView,
-            filter: &|id| util::find_parent_with_component(parents, raycast_ignores, id).is_none(),
-            early_exit_test: &|_| true,
-        },
-    );
-    let world_raycast_distance = world_raycast.first().map(|r| r.1.distance());
+    // Cast the ray and filter out ignored entities
+    let mut world_raycast: Vec<_> = raycast
+        .cast_ray(ray, &MeshRayCastSettings::default())
+        .iter()
+        .filter(|(entity, _)| {
+            util::find_parent_with_component(parents, raycast_ignores, *entity).is_none()
+        })
+        .cloned()
+        .collect();
+
+    // Sort by distance to get closest hits first
+    world_raycast.sort_by(|a, b| {
+        let dist_a = a.1.point.distance(ray.origin);
+        let dist_b = b.1.point.distance(ray.origin);
+        dist_a.partial_cmp(&dist_b).unwrap()
+    });
+
+    let world_raycast_distance = world_raycast
+        .first()
+        .map(|r| r.1.point.distance(ray.origin));
+
     fn world_raycast_to_hit(
-        hits: &[(Entity, IntersectionData)],
+        hits: &[(Entity, bevy::picking::mesh_picking::ray_cast::RayMeshHit)],
         voxels_per_meter: VoxelsPerMeter,
     ) -> Option<RayHit> {
         if hits.is_empty() {
             return None;
         }
 
-        let entry_coords = Coords::from_world(hits[0].1.position(), voxels_per_meter);
+        let entry_coords = Coords::from_world(hits[0].1.point, voxels_per_meter);
         Some(RayHit {
             entry_coords,
             exit_coords: hits
                 .get(1)
-                .map(|(_, h1)| Coords::from_world(h1.position(), voxels_per_meter)),
+                .map(|(_, h1)| Coords::from_world(h1.point, voxels_per_meter)),
             hit_voxel: false,
         })
     }
@@ -99,42 +110,44 @@ pub fn raycast(
     match (world_raycast_distance, voxel_raycast_distance) {
         (Some(wr), Some(vr)) => {
             if wr < vr {
-                world_raycast_to_hit(world_raycast, voxel_per_meters)
+                world_raycast_to_hit(&world_raycast, voxel_per_meters)
             } else {
                 voxel_raycast
             }
         }
-        (Some(_), None) => world_raycast_to_hit(world_raycast, voxel_per_meters),
+        (Some(_), None) => world_raycast_to_hit(&world_raycast, voxel_per_meters),
         (None, Some(_)) => voxel_raycast,
         (None, None) => None,
     }
 }
 
 pub fn update_world_rayhits(
-    mut world_raycast: Raycast,
+    mut world_raycast: MeshRayCast,
     mut cursor_ray_hit: ResMut<CursorRayHit>,
     mut cursor_ray_hit_without_draft: ResMut<CursorRayHitWithoutDraft>,
     chunk_datas: Query<&ChunkData>,
     raycast_ignores: Query<(), With<RaycastIgnore>>,
-    parents: Query<&Parent>,
+    parents: Query<&ChildOf>,
     chunks: Res<Chunks>,
     voxel_size_meters: Res<VoxelSizeMeters>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     main_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
 ) {
     let Some(cursor_position) = primary_window
-        .get_single()
+        .single()
         .ok()
         .and_then(|w| w.cursor_position())
     else {
         return;
     };
 
-    let Ok((camera, camera_transform)) = main_camera.get_single() else {
+    let Ok((camera, camera_transform)) = main_camera.single() else {
         return;
     };
 
-    let ray = camera.viewport_to_world(camera_transform, cursor_position);
+    let ray = camera
+        .viewport_to_world(camera_transform, cursor_position)
+        .ok();
     cursor_ray_hit.ray = ray;
     cursor_ray_hit_without_draft.ray = ray;
     if let Some(ray) = ray {

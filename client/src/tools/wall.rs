@@ -1,4 +1,7 @@
-use bevy::{input::mouse::MouseMotion, prelude::*, render::view::RenderLayers};
+use bevy::{
+    camera::visibility::RenderLayers, input::mouse::MouseMotion, picking::prelude::Pickable,
+    prelude::*,
+};
 use bevy_egui::egui;
 
 use crate::{
@@ -45,13 +48,11 @@ pub fn plugin(app: &mut App) {
                 create_brush.run_if(brush_should_be_created::<OurWallBrush>(Tool::Wall)),
                 destroy_brush.run_if(brush_should_be_destroyed::<OurWallBrush>(Tool::Wall)),
                 update_brush_height
-                    .run_if(resource_exists::<WallBrushState>.and_then(is_cursor_visible)),
-                update_brush_viz.run_if(
-                    resource_exists::<OurWallBrush>.and_then(resource_exists::<WallBrushState>),
-                ),
-                on_click.run_if(
-                    stopped_being_used(Tool::Wall).and_then(resource_exists::<WallBrushState>),
-                ),
+                    .run_if(resource_exists::<WallBrushState>.and(is_cursor_visible)),
+                update_brush_viz
+                    .run_if(resource_exists::<OurWallBrush>.and(resource_exists::<WallBrushState>)),
+                on_click
+                    .run_if(stopped_being_used(Tool::Wall).and(resource_exists::<WallBrushState>)),
             )
                 .chain()
                 .after(update_world_rayhits),
@@ -85,25 +86,26 @@ fn create_brush(
     let id = commands
         .spawn((
             Name::new("Wall Brush"),
-            PbrBundle {
-                mesh: meshes.add(
+            Mesh3d(
+                meshes.add(
                     Cuboid {
                         half_size: Vec3::splat(0.5),
                     }
                     .mesh(),
                 ),
-                material: materials.add(StandardMaterial {
-                    alpha_mode: AlphaMode::Blend,
-                    base_color: Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
-                    unlit: true,
-                    ..default()
-                }),
-                visibility: Visibility::Hidden,
+            ),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                alpha_mode: AlphaMode::Blend,
+                base_color: Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
+                unlit: true,
                 ..default()
-            },
+            })),
+            Transform::default(),
+            Visibility::Hidden,
             AlphaPulse::new(0.25, 1.0),
-            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
+            Pickable::IGNORE,
         ))
         .id();
     commands.insert_resource(OurWallBrush(id));
@@ -111,14 +113,14 @@ fn create_brush(
 }
 
 fn destroy_brush(brush: Res<OurWallBrush>, mut commands: Commands) {
-    commands.entity(brush.0).despawn_recursive();
+    commands.entity(brush.0).despawn();
     commands.remove_resource::<OurWallBrush>();
     commands.remove_resource::<WallBrushState>();
 }
 
 fn update_brush_height(
     mut state: ResMut<WallBrushState>,
-    mut mouse_motion_events: EventReader<MouseMotion>,
+    mut mouse_motion_events: MessageReader<MouseMotion>,
 ) {
     if let WallBrushState::Ready { height, .. } = &mut *state {
         // TODO: consider going for motion in the direction of the extrusion, not just pure vertical movement
@@ -137,11 +139,15 @@ fn update_brush_viz(
 
     mut gizmos: Gizmos<MainCameraGizmosWithoutDepth>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tool_brushes: Query<(&mut Transform, &mut Visibility, &Handle<StandardMaterial>)>,
+    mut tool_brushes: Query<(
+        &mut Transform,
+        &mut Visibility,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
 ) {
     let (mut transform, mut visibility, color) = tool_brushes.get_mut(our_wall_brush.0).unwrap();
 
-    materials.get_mut(color.id()).unwrap().base_color = tool_color.base;
+    materials.get_mut(&color.0).unwrap().base_color = tool_color.base;
     match *state {
         WallBrushState::WaitingForPoint1 => {
             if let Some(hit) = voxel_under_cursor.ray_hit.filter(|_| cursor_visible.0) {
@@ -233,7 +239,7 @@ fn on_click(
     voxels_per_meter: Res<voxel::VoxelsPerMeter>,
     mut state: ResMut<WallBrushState>,
     mut last_used_colors: ResMut<LastUsedColors>,
-    mut pending_dynamic_updates: EventWriter<voxel::ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageWriter<voxel::ChunkPendingDynamicUpdate>,
 ) {
     let voxels_per_meter = *voxels_per_meter;
     match &mut *state {

@@ -1,4 +1,7 @@
-use bevy::{input::mouse::MouseMotion, prelude::*, render::view::RenderLayers};
+use bevy::{
+    camera::visibility::RenderLayers, input::mouse::MouseMotion, picking::prelude::Pickable,
+    prelude::*,
+};
 use bevy_egui::egui;
 
 use crate::{
@@ -47,12 +50,12 @@ pub fn plugin(app: &mut App) {
                 create_brush.run_if(brush_should_be_created::<OurFloorBrush>(Tool::Floor)),
                 destroy_brush.run_if(brush_should_be_destroyed::<OurFloorBrush>(Tool::Floor)),
                 update_floor_width
-                    .run_if(resource_exists::<FloorBrushState>.and_then(is_cursor_visible)),
+                    .run_if(resource_exists::<FloorBrushState>.and(is_cursor_visible)),
                 update_brush_viz.run_if(
-                    resource_exists::<OurFloorBrush>.and_then(resource_exists::<FloorBrushState>),
+                    resource_exists::<OurFloorBrush>.and(resource_exists::<FloorBrushState>),
                 ),
                 on_click.run_if(
-                    stopped_being_used(Tool::Floor).and_then(resource_exists::<FloorBrushState>),
+                    stopped_being_used(Tool::Floor).and(resource_exists::<FloorBrushState>),
                 ),
             )
                 .chain()
@@ -89,20 +92,19 @@ fn create_brush(
     let id = commands
         .spawn((
             Name::new("Floor Brush"),
-            PbrBundle {
-                mesh: meshes.add(Mesh::from(Plane3d::new(Vec3::Y, Vec2::ONE * 0.5))),
-                material: materials.add(StandardMaterial {
-                    alpha_mode: AlphaMode::Blend,
-                    base_color: Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
-                    unlit: true,
-                    ..default()
-                }),
-                visibility: Visibility::Hidden,
+            Mesh3d(meshes.add(Mesh::from(Plane3d::new(Vec3::Y, Vec2::ONE * 0.5)))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                alpha_mode: AlphaMode::Blend,
+                base_color: Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
+                unlit: true,
                 ..default()
-            },
+            })),
+            Transform::default(),
+            Visibility::Hidden,
             AlphaPulse::new(0.25, 1.0),
-            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
+            Pickable::IGNORE,
         ))
         .id();
     commands.insert_resource(OurFloorBrush(id));
@@ -110,14 +112,14 @@ fn create_brush(
 }
 
 fn destroy_brush(brush: Res<OurFloorBrush>, mut commands: Commands) {
-    commands.entity(brush.0).despawn_recursive();
+    commands.entity(brush.0).despawn();
     commands.remove_resource::<OurFloorBrush>();
     commands.remove_resource::<FloorBrushState>();
 }
 
 fn update_floor_width(
     mut state: ResMut<FloorBrushState>,
-    mut mouse_motion_events: EventReader<MouseMotion>,
+    mut mouse_motion_events: MessageReader<MouseMotion>,
 ) {
     if let FloorBrushState::Ready { width, .. } = &mut *state {
         *width += mouse_motion_events.read().map(|e| e.delta.x).sum::<f32>() * 0.002;
@@ -134,11 +136,15 @@ fn update_brush_viz(
     state: Res<FloorBrushState>,
     mut gizmos: Gizmos<MainCameraGizmosWithoutDepth>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tool_brushes: Query<(&mut Transform, &mut Visibility, &Handle<StandardMaterial>)>,
+    mut tool_brushes: Query<(
+        &mut Transform,
+        &mut Visibility,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
 ) {
     let (mut transform, mut visibility, color) = tool_brushes.get_mut(our_floor_brush.0).unwrap();
 
-    materials.get_mut(color.id()).unwrap().base_color = tool_color.base;
+    materials.get_mut(&color.0).unwrap().base_color = tool_color.base;
     match *state {
         FloorBrushState::WaitingForPoint1 => {
             if let Some(hit) = voxel_under_cursor.ray_hit.filter(|_| cursor_visible.0) {
@@ -233,7 +239,7 @@ fn on_click(
     voxels_per_meter: Res<voxel::VoxelsPerMeter>,
     mut state: ResMut<FloorBrushState>,
     mut last_used_colors: ResMut<LastUsedColors>,
-    mut pending_dynamic_updates: EventWriter<voxel::ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageWriter<voxel::ChunkPendingDynamicUpdate>,
 ) {
     let voxels_per_meter = *voxels_per_meter;
     match &mut *state {

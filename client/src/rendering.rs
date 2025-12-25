@@ -1,11 +1,7 @@
 use std::f32::consts::TAU;
 
-use avian3d::prelude::{ColliderConstructor, RigidBody};
-use bevy::{
-    color::palettes::css::SILVER,
-    prelude::*,
-    render::view::{Layer, RenderLayers},
-};
+use avian3d::prelude::{Collider, RigidBody};
+use bevy::{camera::visibility::RenderLayers, color::palettes::css::SILVER, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use crate::{play_mode::PreserveColliderOnPlayExit, raycast::RaycastIgnore};
@@ -60,6 +56,9 @@ pub struct MainCameraGizmos {}
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct MainCameraGizmosWithoutDepth {}
 
+// Layer type for RenderLayers in Bevy 0.17
+pub type Layer = u8;
+
 pub const ALL_NON_MASK_CAMERA_LAYER: Layer = 0;
 pub const MAIN_CAMERA_ONLY_LAYER: Layer = 1;
 pub const MASK_CAMERA_ONLY_LAYER: Layer = 2;
@@ -92,14 +91,14 @@ pub fn plugin(app: &mut App) {
     app.insert_gizmo_config(
         MainCameraGizmos::default(),
         GizmoConfig {
-            render_layers: RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            render_layers: RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             ..default()
         },
     )
     .insert_gizmo_config(
         MainCameraGizmosWithoutDepth::default(),
         GizmoConfig {
-            render_layers: RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            render_layers: RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             depth_bias: -1.0,
             ..default()
         },
@@ -131,9 +130,8 @@ fn setup(
 
     // Sun
     commands.spawn((
-        DirectionalLightBundle {
-            ..Default::default()
-        },
+        DirectionalLight::default(),
+        Transform::default(),
         Sun, // Marks the light as Sun
     ));
     commands.insert_resource(SunAngle(90.0f32.to_radians()));
@@ -142,18 +140,18 @@ fn setup(
     let base_color = Color::from(SILVER);
     commands.spawn((
         Floor,
-        PbrBundle {
-            mesh: meshes.add(
+        Mesh3d(
+            meshes.add(
                 Plane3d::default()
                     .mesh()
                     .size(PLANE_SIZE, PLANE_SIZE)
                     .subdivisions(1),
             ),
-            material: materials.add(base_color),
-            ..default()
-        },
+        ),
+        MeshMaterial3d(materials.add(base_color)),
+        Transform::default(),
         RaycastIgnore,
-        ColliderConstructor::TrimeshFromMesh,
+        Collider::half_space(Vec3::Y),
         RigidBody::Static,
         PreserveColliderOnPlayExit,
     ));
@@ -163,40 +161,40 @@ fn setup(
 fn run_alpha_pulse(
     mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
-    tool_brush: Query<(&AlphaPulse, &Handle<StandardMaterial>)>,
+    tool_brush: Query<(&AlphaPulse, &MeshMaterial3d<StandardMaterial>)>,
 ) {
-    for (AlphaPulse { magnitude, period }, material) in tool_brush.iter() {
-        let material = materials.get_mut(material).unwrap();
+    for (AlphaPulse { magnitude, period }, material_handle) in tool_brush.iter() {
+        let material = materials.get_mut(&material_handle.0).unwrap();
         material.base_color.set_alpha(
-            (1.0 - *magnitude) + *magnitude * (time.elapsed_seconds() * TAU / *period).sin(),
+            (1.0 - *magnitude) + *magnitude * (time.elapsed_secs() * TAU / *period).sin(),
         );
     }
 }
 
 fn update_floor_color(
-    floor: Query<&Handle<StandardMaterial>, With<Floor>>,
+    floor: Query<&MeshMaterial3d<StandardMaterial>, With<Floor>>,
     floor_color: Res<FloorColor>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let Ok(floor_material) = floor.get_single() else {
+    let Ok(floor_material) = floor.single() else {
         return;
     };
-    let material = materials.get_mut(floor_material.id()).unwrap();
+    let material = materials.get_mut(&floor_material.0).unwrap();
     material.base_color = floor_color.0;
 }
 
 #[cfg(feature = "webgpu")]
 fn update_sun(
-    mut atmosphere: bevy_atmosphere::prelude::AtmosphereMut<bevy_atmosphere::prelude::Nishita>,
     mut query: Query<(&mut Transform, &mut DirectionalLight), With<Sun>>,
     sun_angle: Res<SunAngle>,
 ) {
     use light_consts::lux::AMBIENT_DAYLIGHT;
-    let Ok((mut light_trans, mut directional)) = query.get_single_mut() else {
+    let Ok((mut light_trans, mut directional)) = query.single_mut() else {
         return;
     };
     let t = sun_angle.0;
-    atmosphere.sun_position = Vec3::new(0., t.sin(), t.cos());
+    // Bevy's built-in Atmosphere component automatically tracks directional lights
+    // No need to manually set sun_position anymore
     light_trans.rotation = Quat::from_rotation_x(-t);
     directional.illuminance = t.sin().max(0.0).powf(2.0) * AMBIENT_DAYLIGHT;
 }

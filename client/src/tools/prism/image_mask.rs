@@ -276,7 +276,7 @@ impl<'a> ImageMask<'a> {
                 };
                 color[3] = 128;
 
-                let egui_size = ui.ctx().screen_rect().size().min_elem();
+                let egui_size = ui.ctx().content_rect().size().min_elem();
                 let ui_size = rect.size().min_elem();
                 let scale = ui_size / egui_size;
 

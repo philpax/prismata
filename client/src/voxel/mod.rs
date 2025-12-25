@@ -1,9 +1,9 @@
-use std::sync::Arc;
-
-use bevy::{
-    prelude::*,
-    utils::{HashMap, HashSet},
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
 };
+
+use bevy::prelude::*;
 
 mod chunk;
 use chunk::ChunkSphere;
@@ -80,7 +80,7 @@ pub fn clear_all(world: &mut World) {
         .iter(world)
         .collect();
     for entity in entities {
-        world.entity_mut(entity).despawn_recursive();
+        world.entity_mut(entity).despawn();
     }
     info!("Cleared all chunks");
 }
@@ -102,7 +102,7 @@ fn update_sizes(
 
     if voxels_per_meter != old_voxels_per_meter.0 {
         // Only clear the world if the VPM has *actually* changed
-        commands.add(|world: &mut World| {
+        commands.queue(|world: &mut World| {
             clear_all(world);
         });
     }
@@ -436,7 +436,7 @@ pub fn update<
     AllocateChunkFn: Fn(Coords, f32) -> bool + Send + Sync + Copy + 'static,
     UpdateFn: Fn(Coords, Voxel) -> Voxel + Send + Sync + Copy + 'static,
 >(
-    pending_dynamic_updates: &mut EventWriter<ChunkPendingDynamicUpdate>,
+    pending_dynamic_updates: &mut MessageWriter<ChunkPendingDynamicUpdate>,
     // TODO: deal with the potential bug if VPM changes between an update being issued and it being processed
     //
     // The logic here will allocate updates based on the current VPM/chunk size, but if the VPM changes
@@ -465,7 +465,7 @@ pub fn update<
 
             for chunk_z in min_chunk.z..=max_chunk.z {
                 let coords = ChunkCoords(IVec3::new(chunk_x, chunk_y, chunk_z));
-                pending_dynamic_updates.send(ChunkPendingDynamicUpdate {
+                pending_dynamic_updates.write(ChunkPendingDynamicUpdate {
                     coords,
                     should_allocate_chunk: should_allocate_chunk.clone(),
                     operation: Arc::new(move |chunk_data, chunk_coords| {

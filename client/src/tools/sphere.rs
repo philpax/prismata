@@ -1,6 +1,6 @@
 use web_time::Duration;
 
-use bevy::{prelude::*, render::view::RenderLayers};
+use bevy::{camera::visibility::RenderLayers, picking::prelude::Pickable, prelude::*};
 use bevy_egui::egui;
 
 use crate::{
@@ -47,27 +47,26 @@ fn create_brush(
     let id = commands
         .spawn((
             Name::new("Sphere Brush"),
-            PbrBundle {
-                mesh: meshes.add(Sphere { radius: 1.0 }.mesh().ico(5).unwrap()),
-                material: materials.add(StandardMaterial {
-                    alpha_mode: AlphaMode::Blend,
-                    base_color: Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
-                    unlit: true,
-                    ..default()
-                }),
-                visibility: Visibility::Hidden,
+            Mesh3d(meshes.add(Sphere { radius: 1.0 }.mesh().ico(5).unwrap())),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                alpha_mode: AlphaMode::Blend,
+                base_color: Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
+                unlit: true,
                 ..default()
-            },
+            })),
+            Transform::default(),
+            Visibility::Hidden,
             AlphaPulse::new(0.25, 1.0),
-            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER),
+            RenderLayers::layer(MAIN_CAMERA_ONLY_LAYER as usize),
             RaycastIgnore,
+            Pickable::IGNORE,
         ))
         .id();
     commands.insert_resource(OurSphereBrush(id));
 }
 
 fn destroy_brush(brush: Res<OurSphereBrush>, mut commands: Commands) {
-    commands.entity(brush.0).despawn_recursive();
+    commands.entity(brush.0).despawn();
     commands.remove_resource::<OurSphereBrush>();
 }
 
@@ -79,14 +78,18 @@ fn update_brush_viz(
     our_sphere_brush: Res<OurSphereBrush>,
     settings: Res<OurSphereBrushSettings>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tool_brushes: Query<(&mut Transform, &mut Visibility, &Handle<StandardMaterial>)>,
+    mut tool_brushes: Query<(
+        &mut Transform,
+        &mut Visibility,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
 ) {
     let (mut transform, mut visibility, color) = tool_brushes.get_mut(our_sphere_brush.0).unwrap();
     if let Some(voxel) = voxel_under_cursor.ray_hit.filter(|_| cursor_visible.0) {
         transform.translation = voxel.entry_coords.to_world(*voxels_per_meter);
         transform.scale = Vec3::splat(settings.radius);
         *visibility = Visibility::Visible;
-        materials.get_mut(color.id()).unwrap().base_color = tool_color.base;
+        materials.get_mut(&color.0).unwrap().base_color = tool_color.base;
     } else {
         *visibility = Visibility::Hidden;
     }
@@ -98,7 +101,7 @@ fn on_use(
     tool_color: Res<ToolColor>,
     voxels_per_meter: Res<voxel::VoxelsPerMeter>,
     mut last_used_colors: ResMut<LastUsedColors>,
-    mut pending_dynamic_updates: EventWriter<voxel::ChunkPendingDynamicUpdate>,
+    mut pending_dynamic_updates: MessageWriter<voxel::ChunkPendingDynamicUpdate>,
 ) {
     let Some(center) = cursor_ray_hit_without_draft.coords() else {
         return;

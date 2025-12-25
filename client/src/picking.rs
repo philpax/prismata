@@ -1,130 +1,75 @@
-use bevy::prelude::*;
-use bevy_mod_picking::{
-    picking_core::PickingPluginsSettings, prelude::*, selection::SelectionPluginSettings,
+use bevy::{
+    picking::{events::Click, mesh_picking::MeshPickingPlugin, prelude::*},
+    prelude::*,
 };
 use transform_gizmo_bevy::GizmoTarget;
 
-use crate::{tools::ActiveTool, ui::CursorVisible, util};
+use crate::{ui::CursorVisible, util};
 
 #[derive(Component)]
 /// When attached to an entity, all [`Mesh`] children of the entity will be pickable.
+/// Used to identify the root entity when a child mesh is clicked.
 pub struct PickableChildren;
 
 #[derive(Component)]
-/// Attached by [`process_pickable_children`] to all entities made pickable as a result
-/// of pickable parents. Used to determine that the root should be used as the gizmo target.
-struct PickableChild;
+/// Tracks whether an entity is currently selected
+pub struct Selected;
 
 pub fn plugin(app: &mut App) {
-    app.add_plugins(DefaultPickingPlugins)
-        .insert_resource(SelectionPluginSettings {
-            click_nothing_deselect_all: false,
-            ..default()
-        })
-        .add_systems(
-            PreUpdate,
-            (process_pickable_children, toggle_picking_enabled).chain(),
-        )
-        .add_systems(Update, update_picking);
+    app.add_plugins(MeshPickingPlugin)
+        .add_systems(Update, (handle_selection_clicks, update_picking).chain());
 }
 
-fn process_pickable_children(
-    pickable_children_query: Query<Entity, With<PickableChildren>>,
-    children_query: Query<&Children>,
-    mesh_query: Query<&Handle<Mesh>, Without<Pickable>>,
+/// Handle click events to toggle selection
+fn handle_selection_clicks(
+    mut click_events: MessageReader<Pointer<Click>>,
     mut commands: Commands,
-) {
-    fn add_pickable(
-        entity: Entity,
-        children_query: &Query<&Children>,
-        mesh_query: &Query<&Handle<Mesh>, Without<Pickable>>,
-        commands: &mut Commands,
-    ) {
-        if mesh_query.contains(entity) {
-            commands
-                .entity(entity)
-                .insert((PickableBundle::default(), PickableChild));
-        }
-
-        if let Ok(children) = children_query.get(entity) {
-            for child in children.iter() {
-                add_pickable(*child, children_query, mesh_query, commands);
-            }
-        }
-    }
-
-    for entity in pickable_children_query.iter() {
-        add_pickable(entity, &children_query, &mesh_query, &mut commands);
-    }
-}
-
-fn toggle_picking_enabled(
-    gizmo_targets: Query<&GizmoTarget>,
     cursor_visible: Res<CursorVisible>,
-    active_tool: Res<ActiveTool>,
-    mut picking_settings: ResMut<PickingPluginsSettings>,
+    selected_query: Query<(), With<Selected>>,
+    parent_query: Query<&ChildOf>,
+    pickable_children_query: Query<(), With<PickableChildren>>,
 ) {
-    // Picking is disabled when any of the gizmos is focused or active.
-    picking_settings.is_enabled = gizmo_targets
-        .iter()
-        .all(|target| !target.is_focused() && !target.is_active())
-        && cursor_visible.0
-        && active_tool.is_none();
+    // Don't process selection clicks when cursor is hidden (e.g., during camera control)
+    if !cursor_visible.0 {
+        return;
+    }
+
+    for click in click_events.read() {
+        let mut entity = click.entity;
+
+        // If clicked entity is a child of a PickableChildren entity, select the parent instead
+        if let Some(parent) =
+            util::find_parent_with_component(&parent_query, &pickable_children_query, entity)
+        {
+            entity = parent;
+        }
+
+        // Toggle selection
+        if selected_query.contains(entity) {
+            commands.entity(entity).remove::<Selected>();
+        } else {
+            commands.entity(entity).insert(Selected);
+        }
+    }
 }
 
 /// Continuously update entities based on their picking state
 fn update_picking(
     mut commands: Commands,
-    pick_query: Query<(Entity, &PickSelection, Has<PickableChild>)>,
-    target_query: Query<(), With<GizmoTarget>>,
-
-    parent_query: Query<&Parent>,
-    children_query: Query<&Children>,
-    pickable_children_query: Query<(), With<PickableChildren>>,
+    selected_query: Query<Entity, With<Selected>>,
+    target_query: Query<Entity, With<GizmoTarget>>,
 ) {
-    fn get_pick_selected(
-        pick_query: &Query<(Entity, &PickSelection, Has<PickableChild>)>,
-        children_query: &Query<&Children>,
-        entity: Entity,
-    ) -> bool {
-        if pick_query
-            .get(entity)
-            .is_ok_and(|(_, ps, _)| ps.is_selected)
-        {
-            return true;
+    for entity in &selected_query {
+        let has_gizmo_target = target_query.contains(entity);
+        if !has_gizmo_target {
+            commands.entity(entity).insert(GizmoTarget::default());
         }
-
-        children_query.get(entity).is_ok_and(|c| {
-            c.iter()
-                .any(|child| get_pick_selected(pick_query, children_query, *child))
-        })
     }
 
-    for (entity, pick_interaction, is_pickable_child) in &pick_query {
-        let (entity, is_selected) = if is_pickable_child {
-            let parent = match util::find_parent_with_component(
-                &parent_query,
-                &pickable_children_query,
-                entity,
-            ) {
-                Some(parent) => parent,
-                None => continue,
-            };
-
-            (
-                parent,
-                get_pick_selected(&pick_query, &children_query, parent),
-            )
-        } else {
-            (entity, pick_interaction.is_selected)
-        };
-
-        let mut entity_cmd = commands.entity(entity);
-        let has_gizmo_target = target_query.contains(entity);
-        if is_selected && !has_gizmo_target {
-            entity_cmd.insert(GizmoTarget::default());
-        } else if !is_selected && has_gizmo_target {
-            entity_cmd.remove::<GizmoTarget>();
+    // Remove gizmo targets from entities that are no longer selected
+    for entity in &target_query {
+        if !selected_query.contains(entity) {
+            commands.entity(entity).remove::<GizmoTarget>();
         }
     }
 }

@@ -77,20 +77,14 @@ fn main() {
     });
     init_app(&mut app);
 
-    #[cfg(feature = "webgpu")]
-    {
-        app.add_plugins(bevy_atmosphere::plugin::AtmospherePlugin)
-            .insert_resource(bevy_atmosphere::model::AtmosphereModel::default());
-    }
-
     app.insert_resource(ProjectName::default())
         .init_state::<AppState>()
         .add_plugins((
             bevy_mod_reqwest::ReqwestPlugin::default(),
             transform_gizmo_bevy::TransformGizmoPlugin,
-            bevy_egui::EguiPlugin,
+            bevy_egui::EguiPlugin::default(),
             avian3d::PhysicsPlugins::default(),
-            avian3d::debug_render::PhysicsDebugPlugin::default(),
+            avian3d::debug_render::PhysicsDebugPlugin,
             picking::plugin,
             raycast::plugin,
             load_save::plugin,
@@ -205,7 +199,7 @@ fn init_app(app: &mut App) {
                 primary_window: Some(Window {
                     title: "Prismata".to_string(),
                     position,
-                    resolution: bevy::window::WindowResolution::new(size.0 as f32, size.1 as f32),
+                    resolution: bevy::window::WindowResolution::new(size.0, size.1),
                     ..default()
                 }),
                 ..default()

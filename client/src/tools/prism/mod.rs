@@ -2,19 +2,19 @@ use serde::{Deserialize, Serialize};
 use web_time::Duration;
 
 use bevy::{
+    camera::{visibility::RenderLayers, Exposure},
     core_pipeline::{
         prepass::DepthPrepass,
         tonemapping::{DebandDither, Tonemapping},
     },
     prelude::*,
     render::{
-        camera::{CameraProjection, Exposure, RenderTarget},
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         extract_resource::{ExtractResource, ExtractResourcePlugin},
         render_resource::{
             Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
         },
-        view::{ColorGrading, RenderLayers},
+        view::ColorGrading,
         RenderApp,
     },
 };
@@ -62,7 +62,7 @@ impl Plugin for PrismPlugin {
                 (
                     spawn_prism.run_if(
                         resource_exists::<PrismRenderSize>
-                            .and_then(not(any_with_component::<PrismMainCamera>)),
+                            .and(not(any_with_component::<PrismMainCamera>)),
                     ),
                     activate_camera,
                     sync_game_camera_and_prism_camera
@@ -70,7 +70,7 @@ impl Plugin for PrismPlugin {
                         .run_if(is_active(Tool::Prism)),
                     on_use.run_if(is_in_use(Tool::Prism, Some(Duration::from_millis(50)))),
                     update_state_from_events.run_if(
-                        resource_exists::<PrismRenderSize>.and_then(resource_exists::<PrismState>),
+                        resource_exists::<PrismRenderSize>.and(resource_exists::<PrismState>),
                     ),
                     ui.run_if(is_active(Tool::Prism)),
                 )
@@ -84,15 +84,10 @@ impl Plugin for PrismPlugin {
                 WritePlugin::new(ExportRenderedImageHandler),
                 WritePlugin::new(ExportRenderedDepthHandler),
             ))
-            .add_event::<PrismError>()
-            .add_event::<PrismRenderOutput>()
-            // TODO(Bevy 0.15): Move this to a component on the Prism camera once
-            // <https://github.com/bevyengine/bevy/pull/14273> is available on main.
-            //
-            // MSAA must be turned off to make the copy-to-buffer possible. This is
-            // only necessary for the Prism camera, so this being global is a temporary
-            // solution.
-            .insert_resource(Msaa::Off);
+            .add_message::<PrismError>()
+            .add_message::<PrismRenderOutput>();
+        // Note: MSAA is now per-camera (component, not resource).
+        // Prism cameras are spawned with Msaa::Off component directly.
     }
 
     fn finish(&self, app: &mut App) {
@@ -228,12 +223,12 @@ struct PrismPreviewMesh(Handle<Mesh>);
 #[derive(Resource)]
 struct PrismPreviewMaterial(Handle<StandardMaterial>);
 
-#[derive(Event)]
+#[derive(Message)]
 struct PrismError {
     message: String,
 }
 
-#[derive(Clone, Event)]
+#[derive(Clone, Message)]
 pub struct PrismRenderOutput {
     pub render_id: u64,
     pub diffuse: image::DynamicImage,
@@ -457,21 +452,20 @@ fn spawn_prism(
     };
     main_image.resize(size);
     let image_handle = images.add(main_image);
-    egui_user_textures.add_image(image_handle.clone());
+    egui_user_textures.add_image(bevy_egui::EguiTextureHandle::Strong(image_handle.clone()));
     commands.insert_resource(PrismMainImage(image_handle.clone()));
     commands.spawn((
-        Camera3dBundle {
-            camera: Camera {
-                order: 2,
-                target: RenderTarget::Image(image_handle),
-                clear_color: ClearColorConfig::Custom(Color::srgba(1.0, 1.0, 1.0, 1.0)),
-                ..default()
-            },
-            transform,
+        Camera3d::default(),
+        Camera {
+            order: 2,
+            target: image_handle.into(),
+            clear_color: ClearColorConfig::Custom(Color::srgba(1.0, 1.0, 1.0, 1.0)),
             ..default()
         },
+        transform,
         RenderLayers::default(),
         DepthPrepass,
+        Msaa::Off, // Required for copy-to-buffer to work
         PrismMainCamera,
     ));
 
@@ -492,20 +486,21 @@ fn spawn_prism(
     };
     mask_image.resize(size);
     let mask_image_handle = images.add(mask_image);
-    egui_user_textures.add_image(mask_image_handle.clone());
+    egui_user_textures.add_image(bevy_egui::EguiTextureHandle::Strong(
+        mask_image_handle.clone(),
+    ));
     commands.insert_resource(PrismMaskImage(mask_image_handle.clone()));
     commands.spawn((
-        Camera3dBundle {
-            camera: Camera {
-                order: 3,
-                target: RenderTarget::Image(mask_image_handle),
-                clear_color: ClearColorConfig::Custom(Color::BLACK),
-                ..default()
-            },
-            transform,
+        Camera3d::default(),
+        Camera {
+            order: 3,
+            target: mask_image_handle.into(),
+            clear_color: ClearColorConfig::Custom(Color::BLACK),
             ..default()
         },
-        RenderLayers::layer(rendering::MASK_CAMERA_ONLY_LAYER),
+        transform,
+        RenderLayers::layer(rendering::MASK_CAMERA_ONLY_LAYER as usize),
+        Msaa::Off, // Required for copy-to-buffer to work
         PrismMaskCamera,
     ));
 }
@@ -553,7 +548,7 @@ fn sync_game_camera_and_prism_camera(
         game_deband_dither,
         game_color_grading,
         game_exposure,
-    )) = game_camera.get_single()
+    )) = game_camera.single()
     else {
         return;
     };
@@ -587,7 +582,7 @@ fn on_use(
     prism_state: Res<PrismState>,
     prism_entity: Query<(&GlobalTransform, &Projection), With<PrismMainCamera>>,
 ) {
-    let Ok((global_transform, projection)) = prism_entity.get_single() else {
+    let Ok((global_transform, projection)) = prism_entity.single() else {
         return;
     };
     if !prism_state.is_waiting_for_capture() {
@@ -624,15 +619,15 @@ fn update_state_from_events(
     mut toasts: ResMut<Toasts>,
     mut active_tool: ResMut<ActiveTool>,
 
-    mut render_complete: EventReader<PrismRenderOutput>,
-    mut projection_completes: EventReader<ProjectionComplete>,
-    mut error: EventReader<PrismError>,
+    mut render_complete: MessageReader<PrismRenderOutput>,
+    mut projection_completes: MessageReader<ProjectionComplete>,
+    mut error: MessageReader<PrismError>,
 
     preview_mesh: Res<PrismPreviewMesh>,
     preview_material: Res<PrismPreviewMaterial>,
     mut commands: Commands,
 ) {
-    let ctx = contexts.ctx_mut();
+    let ctx = contexts.ctx_mut().unwrap();
 
     for error in error.read() {
         *prism_state = PrismState::Error {
@@ -681,7 +676,7 @@ fn update_state_from_events(
                     "prism_capture_mask",
                     egui::ColorImage::new(
                         [render_size.x as usize, render_size.y as usize],
-                        egui::Color32::TRANSPARENT,
+                        vec![egui::Color32::TRANSPARENT; (render_size.x * render_size.y) as usize],
                     ),
                     egui::TextureOptions::default(),
                 );
@@ -709,7 +704,7 @@ fn update_state_from_events(
                 if !is_active {
                     toasts
                         .info("Prism captured. Ready to reimagine.")
-                        .set_duration(Some(Duration::from_secs(2)));
+                        .duration(Some(Duration::from_secs(2)));
                 }
             }
         }
@@ -731,7 +726,7 @@ fn update_state_from_events(
                         if !is_active {
                             toasts
                                 .info("Prism reimagination complete. Ready to project.")
-                                .set_duration(Some(Duration::from_secs(2)));
+                                .duration(Some(Duration::from_secs(2)));
                         }
 
                         // We intentionally ignore all future events for this state;
@@ -762,7 +757,7 @@ fn update_state_from_events(
                 if !is_active {
                     toasts
                         .info("Prism successfully projected.")
-                        .set_duration(Some(Duration::from_secs(3)));
+                        .duration(Some(Duration::from_secs(3)));
                 } else {
                     active_tool.disable_if_active(Tool::Prism);
                 }
@@ -801,23 +796,23 @@ fn handle_render_complete_event(
     let (size_x, size_y) = (diffuse.width() as usize, diffuse.height() as usize);
     let mask_texture = ctx.load_texture(
         "prism_capture_mask",
-        egui::ColorImage::new([size_x, size_y], egui::Color32::TRANSPARENT),
+        egui::ColorImage::new(
+            [size_x, size_y],
+            vec![egui::Color32::TRANSPARENT; size_x * size_y],
+        ),
         egui::TextureOptions::default(),
     );
 
     let preview_entity = commands
         .spawn((
-            PbrBundle {
-                mesh: preview_mesh.0.clone(),
-                material: preview_material.0.clone(),
-                transform: Transform {
-                    translation: Vec3::from_array(input.camera_position),
-                    rotation: Quat::from_array(input.camera_rotation),
-                    scale: Vec3::ONE,
-                },
-                ..default()
+            Mesh3d(preview_mesh.0.clone()),
+            MeshMaterial3d(preview_material.0.clone()),
+            Transform {
+                translation: Vec3::from_array(input.camera_position),
+                rotation: Quat::from_array(input.camera_rotation),
+                scale: Vec3::ONE,
             },
-            bevy_mod_picking::PickableBundle::default(),
+            bevy::picking::Pickable::default(),
         ))
         .id();
 
@@ -845,13 +840,13 @@ fn ui(
     mut paint: ResMut<PrismPaintSettings>,
     global_transform_query: Query<&GlobalTransform>,
 
-    mut export_image_requests: EventWriter<ExportImage>,
-    mut export_depth_requests: EventWriter<ExportDepth>,
-    mut export_rendered_image_requests: EventWriter<ExportRenderedImage>,
-    mut export_rendered_depth_requests: EventWriter<ExportRenderedDepth>,
-    mut prism_render_output_requests: EventWriter<PrismRenderOutput>,
+    mut export_image_requests: MessageWriter<ExportImage>,
+    mut export_depth_requests: MessageWriter<ExportDepth>,
+    mut export_rendered_image_requests: MessageWriter<ExportRenderedImage>,
+    mut export_rendered_depth_requests: MessageWriter<ExportRenderedDepth>,
+    mut prism_render_output_requests: MessageWriter<PrismRenderOutput>,
 
-    projection_requests: EventWriter<ProjectionRequest>,
+    projection_requests: MessageWriter<ProjectionRequest>,
     http_endpoints: Option<Res<HttpEndpoints>>,
 
     mut commands: Commands,
@@ -876,9 +871,9 @@ fn ui(
     let preview_texture_id = contexts.image_id(&preview_image.0).unwrap();
     let mask_texture_id = contexts.image_id(&mask_image.0).unwrap();
 
-    let ctx = contexts.ctx_mut();
+    let ctx = contexts.ctx_mut().unwrap();
 
-    let screen_size = ctx.screen_rect().size();
+    let screen_size = ctx.content_rect().size();
     let total_size = screen_size.min_elem();
     let image_size_pct = egui::Vec2::splat(0.75);
     let side_panel_width_pct = 0.15;
@@ -975,7 +970,7 @@ fn ui(
                 let json = std::fs::read_to_string("prism_render.json").unwrap();
                 let render: SerializablePrismRenderOutput = serde_json::from_str(&json).unwrap();
                 *prism_state = PrismState::try_from(&render).unwrap();
-                prism_render_output_requests.send(PrismRenderOutput::try_from(render).unwrap());
+                prism_render_output_requests.write(PrismRenderOutput::try_from(render).unwrap());
             }
         }
         PrismState::Capture(_) => {
@@ -1013,7 +1008,7 @@ fn ui(
                             )))
                             .clicked()
                         {
-                            export_image_requests.send(ExportImage);
+                            export_image_requests.write(ExportImage);
                         }
                         if ui
                             .add(egui::Button::new(format!(
@@ -1021,7 +1016,7 @@ fn ui(
                             )))
                             .clicked()
                         {
-                            export_depth_requests.send(ExportDepth);
+                            export_depth_requests.write(ExportDepth);
                         }
                     });
 
@@ -1208,7 +1203,7 @@ fn ui(
                             )))
                             .clicked()
                         {
-                            export_rendered_image_requests.send(ExportRenderedImage);
+                            export_rendered_image_requests.write(ExportRenderedImage);
                         }
                         if ui
                             .add(egui::Button::new(format!(
@@ -1216,7 +1211,7 @@ fn ui(
                             )))
                             .clicked()
                         {
-                            export_rendered_depth_requests.send(ExportRenderedDepth);
+                            export_rendered_depth_requests.write(ExportRenderedDepth);
                         }
                     });
                     ui.horizontal(|ui| {
@@ -1280,14 +1275,14 @@ fn ui(
                     }
                 };
 
-                commands.entity(rendered.preview_entity).despawn_recursive();
+                commands.entity(rendered.preview_entity).despawn();
 
                 *prism_state = PrismState::Projecting {
                     start_time: web_time::Instant::now(),
                     request_id,
                 };
             } else if retake_requested {
-                commands.entity(rendered.preview_entity).despawn_recursive();
+                commands.entity(rendered.preview_entity).despawn();
                 *prism_state = PrismState::default();
             }
             // These are separate to avoid mutably borrowing the state unless necessary
@@ -1383,9 +1378,9 @@ fn reimagine(
                 .unwrap(),
         )
         .on_response(
-            |trigger: Trigger<ReqwestResponseEvent>,
-             mut output: EventWriter<PrismRenderOutput>,
-             mut error: EventWriter<PrismError>| {
+            |trigger: On<ReqwestResponseEvent>,
+             mut output: MessageWriter<PrismRenderOutput>,
+             mut error: MessageWriter<PrismError>| {
                 let response = trigger.event();
                 let result =
                     response
@@ -1399,10 +1394,10 @@ fn reimagine(
 
                 match result {
                     Ok(r) => {
-                        output.send(r);
+                        output.write(r);
                     }
                     Err(e) => {
-                        error.send(PrismError {
+                        error.write(PrismError {
                             message: format!("{e:?}"),
                         });
                     }
@@ -1410,9 +1405,9 @@ fn reimagine(
             },
         )
         .on_error(
-            |trigger: Trigger<ReqwestErrorEvent>, mut errors: EventWriter<PrismError>| {
-                errors.send(PrismError {
-                    message: format!("{:?}", trigger.event().0),
+            |trigger: On<ReqwestErrorEvent>, mut errors: MessageWriter<PrismError>| {
+                errors.write(PrismError {
+                    message: format!("{:?}", trigger.event().error),
                 });
             },
         );
@@ -1421,17 +1416,17 @@ fn reimagine(
 }
 
 fn project(
-    mut projection_requests: EventWriter<ProjectionRequest>,
+    mut projection_requests: MessageWriter<ProjectionRequest>,
     rendered: &PrismStateRendered,
     global_transform: &GlobalTransform,
 ) -> Result<u64, image::ImageError> {
     let request = ProjectionRequest::from_rendered(rendered, global_transform);
     let request_id = request.request_id;
-    projection_requests.send(request);
+    projection_requests.write(request);
     Ok(request_id)
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct ExportImage;
 #[derive(Clone, Copy)]
 pub struct ExportImageHandler;
@@ -1463,7 +1458,7 @@ impl WriteHandler for ExportImageHandler {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct ExportDepth;
 #[derive(Clone, Copy)]
 pub struct ExportDepthHandler;
@@ -1495,7 +1490,7 @@ impl WriteHandler for ExportDepthHandler {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct ExportRenderedImage;
 #[derive(Clone, Copy)]
 pub struct ExportRenderedImageHandler;
@@ -1527,7 +1522,7 @@ impl WriteHandler for ExportRenderedImageHandler {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct ExportRenderedDepth;
 #[derive(Clone, Copy)]
 pub struct ExportRenderedDepthHandler;

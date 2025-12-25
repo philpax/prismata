@@ -238,7 +238,7 @@ impl Spawnables {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct RequestLoad;
 #[derive(Clone, Copy)]
 struct WorldLoadHandler;
@@ -268,7 +268,7 @@ impl file_picker::ReadHandler for WorldLoadHandler {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct RequestSave;
 #[derive(Clone, Copy)]
 struct WorldSaveHandler;
