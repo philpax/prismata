@@ -1,5 +1,9 @@
 use bevy::{
-    picking::{events::Click, mesh_picking::MeshPickingPlugin, prelude::*},
+    picking::{
+        events::Click,
+        mesh_picking::{MeshPickingPlugin, MeshPickingSettings},
+        prelude::*,
+    },
     prelude::*,
 };
 use transform_gizmo_bevy::GizmoTarget;
@@ -20,8 +24,13 @@ struct PickableChild;
 pub struct Selected;
 
 pub fn plugin(app: &mut App) {
-    // Note: DefaultPickingPlugins is now included in DefaultPlugins as of Bevy 0.15+
+    // Configure mesh picking to be opt-in rather than opt-out.
+    // Only entities with explicit Pickable components will be pickable.
     app.add_plugins(MeshPickingPlugin)
+        .insert_resource(MeshPickingSettings {
+            require_markers: true,
+            ..default()
+        })
         .add_systems(PreUpdate, process_pickable_children)
         .add_systems(Update, (handle_selection_clicks, update_picking).chain());
 }
