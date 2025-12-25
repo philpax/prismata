@@ -1,11 +1,11 @@
 use bevy::{
-    camera::visibility::RenderLayers,
+    camera::{visibility::RenderLayers, ClearColorConfig},
     input::mouse::{MouseMotion, MouseWheel},
     pbr::Atmosphere,
     picking::mesh_picking::ray_cast::MeshRayCast,
     prelude::*,
 };
-use bevy_egui::egui;
+use bevy_egui::{egui, EguiGlobalSettings, PrimaryEguiContext};
 
 use crate::{
     raycast::{raycast, RaycastIgnore},
@@ -106,7 +106,11 @@ pub fn ui_top_right_panel(
     ui.label("Press T to swap.");
 }
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, mut egui_settings: ResMut<EguiGlobalSettings>) {
+    // Disable auto-creation of egui context so we can create a dedicated egui camera
+    // that stays active regardless of which 3D camera is being used.
+    egui_settings.auto_create_primary_context = false;
+
     // Camera
     let target = Vec3::new(0., 0.45, 0.);
     let transform = Transform::from_xyz(-0.45, 0.45, -0.45).looking_at(target, Vec3::Y);
@@ -115,11 +119,17 @@ fn setup(mut commands: Commands) {
         MAIN_CAMERA_ONLY_LAYER as usize,
     ]);
 
+    // Both cameras use the same order so they're treated identically by the render pipeline.
+    // Only one should be active at a time.
     commands.spawn((
         MainCamera,
         CameraType::Free,
         CameraController::new_fpv(transform.translation, target),
         Camera3d::default(),
+        Camera {
+            order: 0,
+            ..default()
+        },
         transform,
         #[cfg(feature = "webgpu")]
         Atmosphere::EARTH,
@@ -133,6 +143,7 @@ fn setup(mut commands: Commands) {
         CameraController::new_orbit(transform.translation, target),
         Camera3d::default(),
         Camera {
+            order: 0,
             is_active: false,
             ..default()
         },
@@ -140,6 +151,18 @@ fn setup(mut commands: Commands) {
         #[cfg(feature = "webgpu")]
         Atmosphere::EARTH,
         render_layers,
+    ));
+
+    // Dedicated egui camera - always active, renders last, doesn't clear the screen.
+    // This ensures egui UI is always visible regardless of which 3D camera is active.
+    commands.spawn((
+        PrimaryEguiContext,
+        Camera2d,
+        Camera {
+            order: 100,
+            clear_color: ClearColorConfig::None,
+            ..default()
+        },
     ));
 }
 
