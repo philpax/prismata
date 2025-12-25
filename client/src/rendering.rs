@@ -1,6 +1,6 @@
 use std::f32::consts::TAU;
 
-use avian3d::prelude::{ColliderConstructor, RigidBody};
+use avian3d::prelude::{Collider, RigidBody};
 use bevy::{camera::visibility::RenderLayers, color::palettes::css::SILVER, prelude::*};
 use serde::{Deserialize, Serialize};
 
@@ -151,7 +151,7 @@ fn setup(
         MeshMaterial3d(materials.add(base_color)),
         Transform::default(),
         RaycastIgnore,
-        ColliderConstructor::TrimeshFromMesh,
+        Collider::half_space(Vec3::Y),
         RigidBody::Static,
         PreserveColliderOnPlayExit,
     ));
