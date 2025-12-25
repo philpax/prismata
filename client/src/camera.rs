@@ -81,16 +81,16 @@ pub struct CameraSetup;
 pub fn plugin(app: &mut App) {
     app.add_systems(Startup, setup.in_set(CameraSetup))
         .add_systems(
-        Update,
-        (
-            swap_camera,
-            update_camera.run_if(is_cursor_invisible),
-            sync_primary_and_secondary_camera_transforms,
-            apply_camera_controller,
-            draw_orbit_camera_target.run_if(is_cursor_invisible),
-        )
-            .chain(),
-    );
+            Update,
+            (
+                swap_camera,
+                update_camera.run_if(is_cursor_invisible),
+                sync_primary_and_secondary_camera_transforms,
+                apply_camera_controller,
+                draw_orbit_camera_target.run_if(is_cursor_invisible),
+            )
+                .chain(),
+        );
 }
 
 pub fn ui_top_right_panel(

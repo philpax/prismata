@@ -1,4 +1,7 @@
-use bevy::{camera::visibility::RenderLayers, input::mouse::MouseMotion, picking::prelude::Pickable, prelude::*};
+use bevy::{
+    camera::visibility::RenderLayers, input::mouse::MouseMotion, picking::prelude::Pickable,
+    prelude::*,
+};
 use bevy_egui::egui;
 
 use crate::{

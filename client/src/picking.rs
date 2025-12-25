@@ -1,9 +1,5 @@
 use bevy::{
-    picking::{
-        events::Click,
-        mesh_picking::MeshPickingPlugin,
-        prelude::*,
-    },
+    picking::{events::Click, mesh_picking::MeshPickingPlugin, prelude::*},
     prelude::*,
 };
 use transform_gizmo_bevy::GizmoTarget;

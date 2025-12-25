@@ -199,8 +199,7 @@ fn register_preview_textures(
         for spawnable in pack.spawnables.values_mut() {
             if let Some((_, handle, texture_id @ None)) = &mut spawnable.preview {
                 *texture_id = Some(
-                    egui_contexts
-                        .add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())),
+                    egui_contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())),
                 );
             }
         }
