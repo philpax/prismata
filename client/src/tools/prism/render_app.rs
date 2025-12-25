@@ -11,13 +11,15 @@ use bevy::{
         render_graph::{
             NodeRunError, RenderGraphContext, RenderGraphExt, RenderLabel, ViewNode, ViewNodeRunner,
         },
-        render_resource::{Buffer, BufferDescriptor, BufferUsages, Extent3d, MapMode},
+        render_resource::{
+            Buffer, BufferDescriptor, BufferUsages, Extent3d, MapMode, PollType,
+            TexelCopyBufferInfo, TexelCopyBufferLayout,
+        },
         renderer::{RenderContext, RenderDevice},
         view::{ViewDepthTexture, ViewTarget},
         Render, RenderSystems,
     },
 };
-use wgpu::{TexelCopyBufferInfo, TexelCopyBufferLayout};
 
 use super::{
     PrismCapturePayload, PrismMainCamera, PrismMaskCamera, PrismPostProcessRender, PrismRenderSize,
@@ -275,7 +277,7 @@ fn map_buffers(
             Err(err) => panic!("Failed to map mask buffer {err}"),
         });
 
-        render_device.poll(wgpu::PollType::Wait).unwrap();
+        render_device.poll(PollType::Wait).unwrap();
         info!("Polled device");
 
         let mut payload = PrismCapturePayload {

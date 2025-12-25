@@ -12,6 +12,16 @@ Use `cargo clippy` to check for lints and `cargo fmt` to format code.
 
 **Never use `cargo build` or `cargo run` directly.** These commands require specific environment setup.
 
+## Web Build
+
+To build the client for WebGPU/WASM:
+
+```sh
+./scripts/client_web_build.sh
+```
+
+This builds the client targeting wasm32-unknown-unknown with WebGPU support and outputs to `./build/`.
+
 ## NixOS
 
 On NixOS, run commands through nix-shell:

@@ -5,6 +5,8 @@ with pkgs;
 mkShell rec {
   nativeBuildInputs = [
     pkg-config
+    wasm-bindgen-cli
+    binaryen # for wasm-opt
   ];
   buildInputs = [
     udev alsa-lib-with-plugins vulkan-loader

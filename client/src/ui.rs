@@ -11,9 +11,8 @@ use bevy::{
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 use bevy_egui::{egui, EguiPrimaryContextPass};
-use ecolor::Color32 as OldColor32;
+use egui::{Color32 as OldColor32, Vec2 as OldVec2};
 use egui_aesthetix::Aesthetix;
-use epaint::Vec2 as OldVec2;
 
 use crate::{
     camera,
