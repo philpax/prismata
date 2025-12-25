@@ -1,17 +1,10 @@
-name: Deploy Frontend
+name: Web Build
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - 'client/**'
-      - 'protocol/**'
-      - 'server_lib/**'
-      - 'assets/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'scripts/client_web_build.sh'
-      - '.github/workflows/deploy-frontend.yml'
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -19,7 +12,7 @@ env:
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy Frontend
+    name: Build Web Frontend
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -61,6 +54,7 @@ jobs:
           ./scripts/client_web_build.sh
 
       - name: Checkout GitHub Pages repository
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/checkout@v4
         with:
           repository: philpax/philpax.github.io
@@ -68,6 +62,7 @@ jobs:
           token: ${{ secrets.PAGES_DEPLOY_TOKEN }}
 
       - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         working-directory: pages
         run: |
           mkdir -p static/experimental/prismata
@@ -86,6 +81,7 @@ jobs:
           fi
 
       - name: Deployment complete
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          echo "✓ Frontend deployed successfully!"
-          echo "🌐 Available at: https://philpax.me/experimental/prismata/"
+          echo "Frontend deployed successfully!"
+          echo "Available at: https://philpax.me/experimental/prismata/"
